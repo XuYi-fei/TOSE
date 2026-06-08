@@ -338,7 +338,7 @@ python3 scripts/run_rq1_methods_matrix.py --output-dir rq_results/rq1
 | swat | gmm | 3 |
 | wadi | mean_shift | 3 |
 
-2026-06-08 当前五方法矩阵结果：
+2026-06-08 重新聚类并重跑后的五方法矩阵结果：
 
 | System | Method | Total | FP | FN | FP (%) | FN (%) | MTD | AR (%) |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
@@ -346,12 +346,12 @@ python3 scripts/run_rq1_methods_matrix.py --output-dir rq_results/rq1
 | rubis | ARD | 200 | 166 | 0 | 83.00 | 0.00 | 1.00 | 0.03 |
 | rubis | PRD | 200 | 0 | 0 | 0.00 | 0.00 | 1.00 | 0.19 |
 | rubis | GPD | 200 | 0 | 0 | 0.00 | 0.00 | 0.79 | 0.17 |
-| rubis | GROUP | 200 | 25 | 0 | 12.50 | 0.00 | 3.31 | 0.00 |
+| rubis | GROUP | 200 | 25 | 0 | 12.50 | 0.00 | 3.33 | 0.00 |
 | bsn | SWD | 200 | 146 | 0 | 73.00 | 0.00 | 13.26 | 0.64 |
 | bsn | ARD | 200 | 184 | 0 | 92.00 | 0.00 | 1.00 | 0.03 |
 | bsn | PRD | 200 | 144 | 0 | 72.00 | 0.00 | 7.68 | 0.40 |
 | bsn | GPD | 200 | 0 | 22 | 0.00 | 11.00 | 80.16 | 14.20 |
-| bsn | GROUP | 200 | 4 | 0 | 2.00 | 0.00 | 5.24 | 0.00 |
+| bsn | GROUP | 200 | 4 | 0 | 2.00 | 0.00 | 5.26 | 0.00 |
 | swat | SWD | 200 | 1 | 0 | 0.50 | 0.00 | 6.73 | 0.43 |
 | swat | ARD | 200 | 145 | 0 | 72.50 | 0.00 | 1.00 | 0.03 |
 | swat | PRD | 200 | 0 | 0 | 0.00 | 0.00 | 1.00 | 0.12 |
@@ -368,6 +368,10 @@ python3 scripts/run_rq1_methods_matrix.py --output-dir rq_results/rq1
 - baseline 的 `AR` 沿用 ASE 风格 abnormal-rate 统计。
 - 当前 `GROUP` 的统一 evaluator 尚未定义与 ASE 完全等价的 `AR`，因此统一表中暂填 `0.00`，不把它解释为 GROUP 的真实异常率。
 - 若论文表需要 `GROUP` 的 `AR`，应后续在 `AnomalyEvaluator` 中按 trace 级检测时间补齐同口径统计。
+- 本轮已重新运行四个 subject system 的聚类，再运行 [scripts/run_rq1_methods_matrix.py](/Users/xuyifei/NJU/repos/TOSE/scripts/run_rq1_methods_matrix.py) 生成五方法矩阵。
+- `GROUP` 行使用聚类阶段按聚类质量选出的默认最佳 learned distributions：`rubis=hdbscan`、`bsn=hdbscan`、`swat=gmm`、`wadi=mean_shift`。
+- 已将上述 RQ1 的 `FN/FP/MTD` 填入工作簿副本：`outputs/rq1/分组oracle实验_rq1_filled.xlsx`。
+- 本轮曾尝试重跑四聚类算法的完整 GROUP detection matrix；由于 `affinity_propagation` 在 BSN/SWAT 产生数百到上千个簇，检测耗时过高，已终止该长任务，不作为本次 Excel RQ1 填表依据。
 
 ## Current Interpretation
 
