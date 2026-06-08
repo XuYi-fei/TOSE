@@ -23,6 +23,7 @@ clustering_results/
 detection_results/
 baseline_results/
 baseline_results_smoke/
+rq_results/
 validation_results/
 tmp-test/
 

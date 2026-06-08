@@ -40,6 +40,10 @@ RQ1 当前目标是评估：
    - 检测时先做 exact/nearest 上下文匹配，再用线性 `mu` 校准对 cluster 分布做位置平移
 7. 已新增统一矩阵脚本：
    - [scripts/run_rq1_detection_matrix.py](/Users/xuyifei/NJU/repos/TOSE/scripts/run_rq1_detection_matrix.py)
+8. 已新增论文 RQ1 五方法统一 runner：
+   - [scripts/run_rq1_methods_matrix.py](/Users/xuyifei/NJU/repos/TOSE/scripts/run_rq1_methods_matrix.py)
+   - 方法维度统一为 `SWD`、`ARD`、`PRD`、`GPD`、`GROUP`
+   - 其中 `GROUP` 不再展开四个聚类算法，而是读取 `clustering_results/<system>/learned_distributions.yaml`，即聚类阶段选出的最佳算法结果。
 
 ## Standard Pipeline
 
@@ -126,6 +130,39 @@ python3 detect.py --config configs/<system>_detection_config.yaml
 ```bash
 python3 scripts/run_rq1_detection_matrix.py
 ```
+
+### Unified RQ1 Method Matrix
+
+论文 RQ1 横向对比入口统一为：
+
+```bash
+python3 scripts/run_rq1_methods_matrix.py --output-dir rq_results/rq1
+```
+
+该入口会同时运行：
+
+- `SWD`
+- `ARD`
+- `PRD`
+- `GPD`
+- `GROUP`
+
+输出文件：
+
+- `rq_results/rq1/baseline_methods/<system>/<METHOD>.json`
+- `rq_results/rq1/baseline_methods/<system>/detection_results_<METHOD>.json`
+- `rq_results/rq1/<system>/GROUP/detection_report_GROUP.md`
+- `rq_results/rq1/<system>/GROUP/detection_results_GROUP.json`
+- `rq_results/rq1/<system>/GROUP/detection_results_GROUP.csv`
+- `rq_results/rq1/summary/rq1_methods_summary.csv`
+- `rq_results/rq1/summary/rq1_methods_summary.json`
+
+`GROUP` 的聚类选择规则：
+
+- 只读取 `clustering_results/<system>/learned_distributions.yaml`。
+- 该文件由聚类阶段根据当前最佳聚类方法导出。
+- 不读取 `learned_distributions_hdbscan.yaml`、`learned_distributions_gmm.yaml` 等算法后缀文件。
+- 如果要重新比较四个聚类算法本身，仍使用 [scripts/run_rq1_detection_matrix.py](/Users/xuyifei/NJU/repos/TOSE/scripts/run_rq1_detection_matrix.py)。
 
 ### Headless Plotting
 
@@ -276,6 +313,61 @@ python3 scripts/run_rq1_baseline_matrix.py --output-dir baseline_results
 - `bsn`: 多 detector 口径下 `SWD`、`ARD`、`PRD` 都出现高 FP，`GPD` 无 FP 但 FN 和 MTD 偏高；这比此前单 sensor 口径更接近 ASE baseline 评估方式。
 - `swat`: `PRD` 当前最好，`SWD` 接近可用，`ARD` 高 FP。
 - `wadi`: `SWD` 当前最好；`PRD` 高 FN，`ARD` 高 FP。
+
+## RQ1 Unified Five-Method Matrix
+
+本节对应论文表格的最终方法维度：`SWD`、`ARD`、`PRD`、`GPD`、`GROUP`。
+
+运行命令：
+
+```bash
+python3 scripts/run_rq1_methods_matrix.py --output-dir rq_results/rq1
+```
+
+汇总文件：
+
+- [rq1_methods_summary.csv](/Users/xuyifei/NJU/repos/TOSE/rq_results/rq1/summary/rq1_methods_summary.csv)
+- [rq1_methods_summary.json](/Users/xuyifei/NJU/repos/TOSE/rq_results/rq1/summary/rq1_methods_summary.json)
+
+当前 `GROUP` 行使用的最佳聚类方法：
+
+| System | GROUP Best Algorithm | Cluster Count |
+|---|---|---:|
+| rubis | hdbscan | 3 |
+| bsn | hdbscan | 3 |
+| swat | gmm | 3 |
+| wadi | mean_shift | 3 |
+
+2026-06-08 当前五方法矩阵结果：
+
+| System | Method | Total | FP | FN | FP (%) | FN (%) | MTD | AR (%) |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| rubis | SWD | 200 | 0 | 0 | 0.00 | 0.00 | 0.00 | 0.09 |
+| rubis | ARD | 200 | 166 | 0 | 83.00 | 0.00 | 1.00 | 0.03 |
+| rubis | PRD | 200 | 0 | 0 | 0.00 | 0.00 | 1.00 | 0.19 |
+| rubis | GPD | 200 | 0 | 0 | 0.00 | 0.00 | 0.79 | 0.17 |
+| rubis | GROUP | 200 | 25 | 0 | 12.50 | 0.00 | 3.31 | 0.00 |
+| bsn | SWD | 200 | 146 | 0 | 73.00 | 0.00 | 13.26 | 0.64 |
+| bsn | ARD | 200 | 184 | 0 | 92.00 | 0.00 | 1.00 | 0.03 |
+| bsn | PRD | 200 | 144 | 0 | 72.00 | 0.00 | 7.68 | 0.40 |
+| bsn | GPD | 200 | 0 | 22 | 0.00 | 11.00 | 80.16 | 14.20 |
+| bsn | GROUP | 200 | 4 | 0 | 2.00 | 0.00 | 5.24 | 0.00 |
+| swat | SWD | 200 | 1 | 0 | 0.50 | 0.00 | 6.73 | 0.43 |
+| swat | ARD | 200 | 145 | 0 | 72.50 | 0.00 | 1.00 | 0.03 |
+| swat | PRD | 200 | 0 | 0 | 0.00 | 0.00 | 1.00 | 0.12 |
+| swat | GPD | 200 | 14 | 0 | 7.00 | 0.00 | 11.59 | 0.65 |
+| swat | GROUP | 200 | 10 | 0 | 5.00 | 0.00 | 2.58 | 0.00 |
+| wadi | SWD | 200 | 1 | 0 | 0.50 | 0.00 | 17.11 | 2.50 |
+| wadi | ARD | 200 | 200 | 0 | 100.00 | 0.00 | 0.00 | 0.00 |
+| wadi | PRD | 200 | 0 | 189 | 0.00 | 94.50 | 76.82 | 24.09 |
+| wadi | GPD | 200 | 20 | 0 | 10.00 | 0.00 | 21.95 | 2.87 |
+| wadi | GROUP | 200 | 0 | 6 | 0.00 | 3.00 | 17.76 | 0.00 |
+
+说明：
+
+- baseline 的 `AR` 沿用 ASE 风格 abnormal-rate 统计。
+- 当前 `GROUP` 的统一 evaluator 尚未定义与 ASE 完全等价的 `AR`，因此统一表中暂填 `0.00`，不把它解释为 GROUP 的真实异常率。
+- 若论文表需要 `GROUP` 的 `AR`，应后续在 `AnomalyEvaluator` 中按 trace 级检测时间补齐同口径统计。
 
 ## Current Interpretation
 

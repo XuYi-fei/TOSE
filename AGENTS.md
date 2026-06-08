@@ -21,6 +21,7 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 RQ1 当前目标：
 - 在 `rubis`、`bsn`、`swat`、`wadi` 四个 subject system 上，对 `hdbscan`、`gmm`、`affinity_propagation`、`mean_shift` 四种聚类算法做统一辨识与异常检测对比。
+- 论文横向方法对比使用 `SWD`、`ARD`、`PRD`、`GPD`、`GROUP` 五种方法；其中 `GROUP` 使用默认最佳聚类结果 `clustering_results/<system>/learned_distributions.yaml`。
 - 重点跟踪 16 组实验的 `fp` / `fn` 表现、abnormal 数据合理性，以及高 `fp` 的成因。
 
 RQ1 详细文档：
@@ -32,6 +33,13 @@ RQ1 关键结果文件：
 
 RQ1 统一重跑脚本：
 - `@/scripts/run_rq1_detection_matrix.py`
+
+RQ1 五方法统一对比脚本：
+- `@/scripts/run_rq1_methods_matrix.py`
+
+RQ1 五方法统一结果：
+- `@/rq_results/rq1/summary/rq1_methods_summary.csv`
+- `@/rq_results/rq1/summary/rq1_methods_summary.json`
 
 Git 提交规范：
 - 每次修改代码后都要运行聚焦验证，更新必要的进度文档，然后提交 git。

@@ -37,6 +37,10 @@
   - 运行 ASE 风格 baseline 对比方法：`SWD`、`ARD`、`PRD`、`GPD`
   - 读取 `data/<system>/{identity,abnormal}`
   - 输出到 `baseline_results/`
+- `scripts/run_rq1_methods_matrix.py`
+  - 运行论文 RQ1 横向五方法矩阵：`SWD`、`ARD`、`PRD`、`GPD`、`GROUP`
+  - `GROUP` 使用默认最佳聚类结果 `clustering_results/<system>/learned_distributions.yaml`
+  - 输出到 `rq_results/rq1/`
 
 ### WaDi 专用入口
 
@@ -131,10 +135,12 @@ TOSE/
 ├── cluster_analysis/
 ├── anomaly_detection/
 ├── baseline_methods/
+├── rq_methods/
 ├── common/
 ├── clustering_results/
 ├── detection_results/
 ├── baseline_results/
+├── rq_results/
 ├── docs/
 ├── tests/
 └── wadi-original/
@@ -191,6 +197,8 @@ TOSE/
 - 检测阶段直接读取聚类导出的 cluster 级 distributions，因此辨识和检测都保持自由聚类。
 - 若只做单算法对比实验，优先使用算法专属配置和带后缀的输出文件，避免结果互相覆盖。
 - RQ1 baseline 结果必须写入 `baseline_results/`，不要覆盖 GROUP 链路的 `detection_results/`。
+- RQ1 论文五方法统一对比写入 `rq_results/rq1/`，不要覆盖旧的 `baseline_results/` 或 `detection_results/`。
+- 五方法统一对比中的 `GROUP` 固定读取 `clustering_results/<system>/learned_distributions.yaml`，即聚类阶段选择的最佳算法产物；四聚类算法内部对比仍使用 `scripts/run_rq1_detection_matrix.py`。
 - 每次代码修改后应运行聚焦验证、更新进度文档并提交 git；提交信息必须是多行 message，正文写清楚改动、原因和验证。
 
 ## 相关文档
