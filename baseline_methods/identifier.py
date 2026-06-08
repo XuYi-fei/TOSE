@@ -52,13 +52,13 @@ class BaselineIdentifier:
         secondary_identity_path = Path(secondary_identity_dir) if secondary_identity_dir else None
 
         if method == "SWD":
-            detectors = [self._identify_swd(identity_dir)]
+            detectors = self._identify_swd(identity_dir)
         elif method == "ARD":
-            detectors = [self._identify_ard()]
+            detectors = self._identify_ard()
         elif method == "GPD":
-            detectors = [self._identify_gpd(identity_dir)]
+            detectors = self._identify_gpd(identity_dir)
         elif method == "PRD":
-            detectors = [self._identify_prd(identity_dir, secondary_identity_path)]
+            detectors = self._identify_prd(identity_dir, secondary_identity_path)
         else:
             raise ValueError(f"不支持的 baseline 方法: {method}")
 
@@ -72,69 +72,96 @@ class BaselineIdentifier:
     def _identity_values(self, identity_dir: Path) -> np.ndarray:
         return self.adapter.load_all_values(identity_dir).astype(float)
 
-    def _identify_swd(self, identity_dir: Path) -> dict:
-        trace_values = self.adapter.load_directory_values(identity_dir)
+    def _identity_values_by_detector(self, identity_dir: Path) -> list[np.ndarray]:
+        return [values.astype(float) for values in self.adapter.load_all_matrix_values(identity_dir)]
+
+    def _trace_values_by_detector(self, identity_dir: Path) -> list[list[np.ndarray]]:
+        matrices = self.adapter.load_directory_matrices(identity_dir)
+        detector_count = matrices[0].shape[1]
+        return [[matrix[:, detector_index].astype(float) for matrix in matrices] for detector_index in range(detector_count)]
+
+    def _identify_swd(self, identity_dir: Path) -> list[dict]:
+        all_trace_values = self._trace_values_by_detector(identity_dir)
         window_size = config.SWD_WINDOW_SIZE
-        averages: list[float] = []
-        for values in trace_values:
-            if len(values) < window_size:
-                averages.append(float(np.mean(values)))
-                continue
-            for start in range(0, len(values) - window_size + 1):
-                averages.append(float(np.mean(values[start : start + window_size])))
+        sample_ratios = config.SWD_SAMPLE_RATIO.get(self.system_type, 0.0)
+        if not isinstance(sample_ratios, list):
+            sample_ratios = [sample_ratios] * len(all_trace_values)
+        detectors = []
+        for detector_index, trace_values in enumerate(all_trace_values):
+            averages: list[float] = []
+            for values in trace_values:
+                if len(values) < window_size:
+                    averages.append(float(np.mean(values)))
+                    continue
+                for start in range(0, len(values) - window_size + 1):
+                    averages.append(float(np.mean(values[start : start + window_size])))
 
-        if not averages:
-            raise ValueError(f"SWD 无法从 {identity_dir} 辨识窗口均值")
+            if not averages:
+                raise ValueError(f"SWD 无法从 {identity_dir} 辨识窗口均值")
 
-        return {
-            "window_size": window_size,
-            "avg_y_min": float(min(averages)),
-            "avg_y_max": float(max(averages)),
-            "sample_ratio": config.SWD_SAMPLE_RATIO.get(self.system_type, 0.0),
-        }
+            detectors.append({
+                "window_size": window_size,
+                "avg_y_min": float(min(averages)),
+                "avg_y_max": float(max(averages)),
+                "sample_ratio": float(sample_ratios[detector_index]),
+            })
+        return detectors
 
-    def _identify_ard(self) -> dict:
-        return {
-            "r": config.ARD_ORDER,
-            "threshold": config.THRESHOLD,
-            "window_size": config.ARD_WINDOW_SIZE,
-        }
+    def _identify_ard(self) -> list[dict]:
+        return [
+            {
+                "r": config.ARD_ORDER,
+                "threshold": config.THRESHOLD,
+                "window_size": config.ARD_WINDOW_SIZE,
+            }
+            for _ in range(config.DETECTOR_COUNT[self.system_type])
+        ]
 
-    def _identify_gpd(self, identity_dir: Path) -> dict:
-        estimated_values = []
-        p_values = []
+    def _identify_gpd(self, identity_dir: Path) -> list[dict]:
+        values_by_detector = self._trace_values_by_detector(identity_dir)
         r_k = config.GPD_IDENTIFY_RK
         q_k = config.GPD_QK[self.system_type]
         h_k = config.GPD_HK[self.system_type]
         f_k = 1.0
+        detectors = []
 
-        for values in self.adapter.load_directory_values(identity_dir):
-            estimated_y = float(np.mean(values))
-            p = config.GPD_IDENTIFY_P[self.system_type]
-            for y in values:
-                estimated_condition = estimated_y * f_k
-                p_condition = f_k * p * f_k + q_k
-                denominator = h_k * p * h_k + r_k
-                gain = p_condition * h_k / denominator if denominator != 0 else 0.0
-                estimated_y = estimated_condition + gain * (float(y) - h_k * estimated_condition)
-                p = (1.0 - gain * h_k) * p_condition
-            estimated_values.append(float(estimated_y))
-            p_values.append(float(max(p, 1e-12)))
+        for trace_values in values_by_detector:
+            estimated_values = []
+            p_values = []
+            for values in trace_values:
+                estimated_y = float(np.mean(values))
+                p = config.GPD_IDENTIFY_P[self.system_type]
+                for y in values:
+                    estimated_condition = estimated_y * f_k
+                    p_condition = f_k * p * f_k + q_k
+                    denominator = h_k * p * h_k + r_k
+                    gain = p_condition * h_k / denominator if denominator != 0 else 0.0
+                    estimated_y = estimated_condition + gain * (float(y) - h_k * estimated_condition)
+                    p = (1.0 - gain * h_k) * p_condition
+                estimated_values.append(float(estimated_y))
+                p_values.append(float(max(p, 1e-12)))
 
-        return {
-            "R_k": config.GPD_RK[self.system_type],
-            "Q_k": q_k,
-            "F_k": f_k,
-            "H_k": h_k,
-            "estimated_y0": float(np.mean(estimated_values)),
-            "p0": float(np.mean(p_values)),
-            "estimated_y_low": float(min(estimated_values)),
-            "estimated_y_high": float(max(estimated_values)),
-            "threshold": config.THRESHOLD,
-        }
+            detectors.append({
+                "R_k": config.GPD_RK[self.system_type],
+                "Q_k": q_k,
+                "F_k": f_k,
+                "H_k": h_k,
+                "estimated_y0": float(np.mean(estimated_values)),
+                "p0": float(np.mean(p_values)),
+                "estimated_y_low": float(min(estimated_values)),
+                "estimated_y_high": float(max(estimated_values)),
+                "threshold": config.THRESHOLD,
+            })
+        return detectors
 
-    def _identify_prd(self, identity_dir: Path, secondary_identity_dir: Path | None) -> dict:
-        epsilon_values, fit_values = self._split_prd_values(identity_dir, secondary_identity_dir)
+    def _identify_prd(self, identity_dir: Path, secondary_identity_dir: Path | None) -> list[dict]:
+        split_values = self._split_prd_values(identity_dir, secondary_identity_dir)
+        detectors = []
+        for epsilon_values, fit_values in split_values:
+            detectors.append(self._identify_one_prd(epsilon_values, fit_values))
+        return detectors
+
+    def _identify_one_prd(self, epsilon_values: np.ndarray, fit_values: np.ndarray) -> dict:
         epsilon_mu = float(np.mean(epsilon_values))
         epsilon_std = float(np.std(epsilon_values))
         epsilon_std = max(epsilon_std, 1e-12)
@@ -170,21 +197,29 @@ class BaselineIdentifier:
         self,
         identity_dir: Path,
         secondary_identity_dir: Path | None,
-    ) -> tuple[np.ndarray, np.ndarray]:
+    ) -> list[tuple[np.ndarray, np.ndarray]]:
         if secondary_identity_dir is not None and secondary_identity_dir.exists():
-            return self._identity_values(identity_dir), self._identity_values(secondary_identity_dir)
+            return list(zip(
+                self._identity_values_by_detector(identity_dir),
+                self._identity_values_by_detector(secondary_identity_dir),
+            ))
 
         trace_files = sorted(identity_dir.glob("*.txt"))
         if len(trace_files) < 2:
-            values = self._identity_values(identity_dir)
-            return values, values
+            values_by_detector = self._identity_values_by_detector(identity_dir)
+            return [(values, values) for values in values_by_detector]
 
         split_index = max(1, len(trace_files) // 2)
-        epsilon_values = [self.adapter.load(path).values for path in trace_files[:split_index]]
-        fit_values = [self.adapter.load(path).values for path in trace_files[split_index:]]
-        if not fit_values:
-            fit_values = epsilon_values
-        return np.concatenate(epsilon_values), np.concatenate(fit_values)
+        epsilon_matrices = [self.adapter.load_trace_matrix(path)[1] for path in trace_files[:split_index]]
+        fit_matrices = [self.adapter.load_trace_matrix(path)[1] for path in trace_files[split_index:]]
+        if not fit_matrices:
+            fit_matrices = epsilon_matrices
+        epsilon_matrix = np.vstack(epsilon_matrices)
+        fit_matrix = np.vstack(fit_matrices)
+        return [
+            (epsilon_matrix[:, detector_index], fit_matrix[:, detector_index])
+            for detector_index in range(epsilon_matrix.shape[1])
+        ]
 
     def _safe_prd_sample_num(self, epsilon: float) -> int:
         numerator = math.log(config.THRESHOLD * 2.0)

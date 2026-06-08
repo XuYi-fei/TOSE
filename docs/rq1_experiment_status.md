@@ -217,6 +217,12 @@ RQ1 相关代码入口和关键落点：
 
 为对齐 `分组oracle实验.xlsx` 中 RQ1 的横向 baseline 对比，已新增独立 baseline 适配层，仿照 ASE25Experiment 的实现接入当前 TOSE 数据目录。
 
+当前迁移口径：
+
+- `rubis`、`swat`、`wadi` 使用单 detector。
+- `bsn` 使用 ASE 风格 6 detector MultiDetector，每个 `/g3t1_1` 到 `/g3t1_6` sensor 独立辨识和检测。
+- BSN trace 的 `sensor_index` 是目标异常 sensor；首次报警必须只来自该目标 sensor 才计为 TP，否则按 FP 处理。
+
 baseline 方法：
 
 - `SWD`: sliding-window mean range detector
@@ -251,10 +257,10 @@ python3 scripts/run_rq1_baseline_matrix.py --output-dir baseline_results
 | rubis | ARD | 200 | 34 | 166 | 0 | 83.00 | 0.00 | 1.00 | 0.03 |
 | rubis | PRD | 200 | 200 | 0 | 0 | 0.00 | 0.00 | 1.00 | 0.19 |
 | rubis | GPD | 200 | 200 | 0 | 0 | 0.00 | 0.00 | 0.79 | 0.17 |
-| bsn | SWD | 200 | 56 | 144 | 0 | 72.00 | 0.00 | 13.32 | 0.67 |
-| bsn | ARD | 200 | 47 | 153 | 0 | 76.50 | 0.00 | 4.91 | 0.23 |
-| bsn | PRD | 200 | 200 | 0 | 0 | 0.00 | 0.00 | 14.96 | 2.66 |
-| bsn | GPD | 200 | 190 | 0 | 10 | 0.00 | 5.00 | 66.23 | 11.60 |
+| bsn | SWD | 200 | 54 | 146 | 0 | 73.00 | 0.00 | 13.26 | 0.64 |
+| bsn | ARD | 200 | 16 | 184 | 0 | 92.00 | 0.00 | 1.00 | 0.03 |
+| bsn | PRD | 200 | 56 | 144 | 0 | 72.00 | 0.00 | 7.68 | 0.40 |
+| bsn | GPD | 200 | 178 | 0 | 22 | 0.00 | 11.00 | 80.16 | 14.20 |
 | swat | SWD | 200 | 199 | 1 | 0 | 0.50 | 0.00 | 6.73 | 0.43 |
 | swat | ARD | 200 | 55 | 145 | 0 | 72.50 | 0.00 | 1.00 | 0.03 |
 | swat | PRD | 200 | 200 | 0 | 0 | 0.00 | 0.00 | 1.00 | 0.12 |
@@ -267,7 +273,7 @@ python3 scripts/run_rq1_baseline_matrix.py --output-dir baseline_results
 当前直接结论：
 
 - `rubis`: `SWD`、`PRD`、`GPD` 表现稳定，`ARD` 高 FP。
-- `bsn`: `PRD` 当前最好；`SWD`、`ARD` 高 FP，`GPD` 有少量 FN 且 MTD 偏高。
+- `bsn`: 多 detector 口径下 `SWD`、`ARD`、`PRD` 都出现高 FP，`GPD` 无 FP 但 FN 和 MTD 偏高；这比此前单 sensor 口径更接近 ASE baseline 评估方式。
 - `swat`: `PRD` 当前最好，`SWD` 接近可用，`ARD` 高 FP。
 - `wadi`: `SWD` 当前最好；`PRD` 高 FN，`ARD` 高 FP。
 

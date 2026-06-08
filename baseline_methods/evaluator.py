@@ -21,6 +21,7 @@ class TraceBaselineResult:
     abn_start_time: float | None
     first_detection_time: float | None
     detection_delay_loops: int | None
+    alarm_indices: list[int]
     abnormal_time: float
     abnormal_total_time: float
 
@@ -38,25 +39,33 @@ class BaselineEvaluator:
 
     def evaluate_trace(self, trace_file: Path) -> TraceBaselineResult:
         trace = self.adapter.load(trace_file)
-        detector = create_detector(self.config.method, self.config.detectors[0])
-        detector.reset()
+        detectors = [create_detector(self.config.method, detector_config) for detector_config in self.config.detectors]
+        for detector in detectors:
+            detector.reset()
 
         first_detection_time = None
         first_detection_index = None
-        for index, (time_value, metric_value) in enumerate(zip(trace.times, trace.values)):
-            _, alarm = detector.detect(float(metric_value))
-            if alarm:
+        first_alarm_indices: list[int] = []
+        for index, (time_value, metric_values) in enumerate(zip(trace.times, trace.values_matrix)):
+            alarms = []
+            for detector_index, detector in enumerate(detectors):
+                _, alarm = detector.detect(float(metric_values[detector_index]))
+                if alarm:
+                    alarms.append(detector_index)
+            if alarms:
                 first_detection_time = float(time_value)
                 first_detection_index = index
+                first_alarm_indices = alarms
                 break
 
-        return self._classify(trace, first_detection_time, first_detection_index)
+        return self._classify(trace, first_detection_time, first_detection_index, first_alarm_indices)
 
     def _classify(
         self,
         trace: BaselineTrace,
         first_detection_time: float | None,
         first_detection_index: int | None,
+        alarm_indices: list[int],
     ) -> TraceBaselineResult:
         if trace.abn_start_time is None:
             classification = "TN" if first_detection_time is None else "FP"
@@ -66,6 +75,7 @@ class BaselineEvaluator:
                 abn_start_time=None,
                 first_detection_time=first_detection_time,
                 detection_delay_loops=None,
+                alarm_indices=alarm_indices,
                 abnormal_time=0.0,
                 abnormal_total_time=0.0,
             )
@@ -83,12 +93,15 @@ class BaselineEvaluator:
                 abn_start_time=trace.abn_start_time,
                 first_detection_time=None,
                 detection_delay_loops=None,
+                alarm_indices=[],
                 abnormal_time=max(float(trace.duration) - trace.abn_start_time, 0.0),
                 abnormal_total_time=abnormal_total_time,
             )
 
         delay = int(first_detection_index - abn_index) if first_detection_index is not None else None
-        classification = "TP" if first_detection_time >= trace.abn_start_time else "FP"
+        target_sensor = int(trace.sensor_index or 0)
+        target_only_alarm = alarm_indices == [target_sensor]
+        classification = "TP" if first_detection_time >= trace.abn_start_time and target_only_alarm else "FP"
         abnormal_time = 0.0
         if classification == "TP":
             abnormal_time = first_detection_time - trace.abn_start_time + config.TIME_UNIT_PER_LOOP[self.system_type]
@@ -99,6 +112,7 @@ class BaselineEvaluator:
             abn_start_time=trace.abn_start_time,
             first_detection_time=first_detection_time,
             detection_delay_loops=delay,
+            alarm_indices=alarm_indices,
             abnormal_time=abnormal_time,
             abnormal_total_time=abnormal_total_time,
         )
