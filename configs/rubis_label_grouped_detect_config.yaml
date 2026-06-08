@@ -1,0 +1,20 @@
+# RUBIS label-grouped baseline 检测配置
+
+system_type: rubis
+learned_distributions: clustering_results/rubis/learned_distributions_label_grouped.yaml
+test_data_path: data/rubis/abnormal
+
+detection:
+  sigma_threshold: 3.0
+  aggregation_method: max_p_value
+  context_matching_strategy: nearest
+  apply_context_mu_shift: true
+  alarm_count_policy: binomial_confidence_bound
+  trace_alarm_confidence: 0.99
+  min_samples_for_detection: 1
+
+output:
+  dir: detection_results/rubis
+  generate_visualizations: true
+  save_anomaly_points: true
+  file_suffix: label_grouped

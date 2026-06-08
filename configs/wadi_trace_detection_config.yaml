@@ -1,0 +1,28 @@
+# WaDi trace-style detection configuration
+
+dataset:
+  name: wadi_trace
+  test_data_path: data/wadi_trace/abnormal
+
+adapter:
+  type: wadi
+  manual_include: []
+  manual_exclude: []
+
+detection:
+  mode: state_conditional
+  state_threshold: 3.0
+  cross_state_threshold: 2.5
+  distributions_path: clustering_results/wadi_trace/learned_distributions.yaml
+
+state_inference:
+  method: metric_fallback
+  pump_columns:
+    - HMI_2_P_001_STATUS
+    - HMI_2_P_002_STATUS
+  fallback_metric: HMI_2_LT_001.PV
+  fallback_threshold: 0.0
+
+output:
+  results_csv: detection_results/wadi_trace/detection_results.csv
+  results_json: detection_results/wadi_trace/detection_results.json

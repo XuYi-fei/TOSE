@@ -1,0 +1,21 @@
+# Core dependencies
+pandas>=1.3.0
+numpy>=1.20.0
+scipy>=1.9.0
+
+# Clustering algorithms
+hdbscan>=0.8.0
+scikit-learn>=0.24.0
+
+# Memory monitoring
+psutil>=5.8.0
+
+# Change point detection (for WaDi state detection fallback)
+ruptures>=1.1.0
+
+# Visualization
+matplotlib>=3.3.0
+seaborn>=0.11.0
+
+# Configuration
+pyyaml>=5.4.0

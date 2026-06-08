@@ -1,0 +1,16 @@
+# BSN label-grouped baseline 训练配置
+
+system_type: bsn
+data_path: data/bsn/identity
+
+candidate_distributions:
+  - norm
+  - lognorm
+  - gamma
+  - weibull_min
+
+normality_alpha: 0.05
+
+output:
+  dir: clustering_results/bsn
+  learned_distributions_path: clustering_results/bsn/learned_distributions_label_grouped.yaml

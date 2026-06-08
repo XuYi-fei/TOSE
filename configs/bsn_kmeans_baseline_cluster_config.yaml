@@ -1,0 +1,11 @@
+# BSN RQ2 kmeans baseline 训练配置
+
+system_type: bsn
+data_path: data/bsn/identity
+
+k_values: [2, 3, 4, 5, 6, 7, 8, 9, 10]
+random_state: 42
+n_init: 10
+
+output:
+  dir: clustering_results/bsn/rq2_kmeans_baseline

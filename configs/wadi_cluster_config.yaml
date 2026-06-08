@@ -1,0 +1,57 @@
+# WaDi Clustering Configuration
+# For learning distributions from identity (normal) data
+
+dataset:
+  name: wadi
+  identity_data_path: data/wadi/identity/WaDi.A3_Dec 2023 Historian Data_original.csv
+
+adapter:
+  type: wadi
+  top_k: 3  # Select top 3 metrics
+  quality_threshold: 0.8  # Min 80% data completeness
+  cv_min: 0.01  # Filter out too-stable sensors
+  cv_max: 2.0   # Filter out too-noisy sensors
+  chunk_size: 10000  # Rows per chunk for large files
+  memory_limit_mb: 2048  # Memory ceiling
+
+  # Manual metric override (optional)
+  manual_include: []
+    # - HMI_1_LT_002.PV  # Force include this metric
+  manual_exclude: []
+    # - HMI_3_AIT_001.PV  # Force exclude this metric
+
+# Environment state detection
+environment_detection:
+  method: pump_status  # or 'change_point'
+  pump_columns:
+    - HMI_2_P_001_STATUS
+    - HMI_2_P_002_STATUS
+  num_states: 3  # Expected number of operational states (LOW/MEDIUM/HIGH)
+  auto_detect_states: false  # Use elbow method to auto-detect K
+  max_states: 5  # For auto-detection
+  fallback_metric: HMI_2_FIT_001.PV  # For change point fallback
+  fallback_threshold: 0.2  # Switch to change point if >20% bad input
+  transition_buffer_seconds: 0  # Exclude transition periods (0 = disabled)
+  cluster_transitions: false  # Learn transient distributions
+
+  validation:
+    min_separation: 0.3  # Min metric difference between states (L/s)
+    check_ordering: true  # Verify state ordering by metric mean
+
+# Clustering configuration
+clustering:
+  method: hdbscan
+  min_cluster_size: 50
+  state_aware: true  # Enable state-conditional clustering
+  multi_metric: false  # Cluster multiple metrics together (future)
+
+# Validation
+validation:
+  check_separation: true
+  min_sigma_separation: 3.0  # Min separation between state distributions
+
+# Output paths
+output:
+  distributions_path: clustering_results/wadi/learned_distributions.yaml
+  state_labels_path: clustering_results/wadi/state_labels.csv
+  checkpoint_path: clustering_results/wadi/clustering_checkpoint.json

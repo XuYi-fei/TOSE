@@ -1,0 +1,21 @@
+# WADI异常检测配置文件（通用多算法框架）
+
+system_type: wadi
+
+learned_distributions: clustering_results/wadi/learned_distributions.yaml
+
+test_data_path: data/wadi/abnormal
+
+detection:
+  sigma_threshold: 3.0
+  aggregation_method: max_p_value
+  context_matching_strategy: nearest
+  apply_context_mu_shift: true
+  alarm_count_policy: binomial_confidence_bound
+  trace_alarm_confidence: 0.99
+  min_samples_for_detection: 1
+
+output:
+  dir: detection_results/wadi
+  generate_visualizations: true
+  save_anomaly_points: true

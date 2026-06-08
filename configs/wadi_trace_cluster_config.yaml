@@ -1,0 +1,37 @@
+# WaDi trace-style clustering configuration
+
+dataset:
+  name: wadi_trace
+  identity_data_path: data/wadi_trace/identity
+
+adapter:
+  type: wadi
+  top_k: 1
+  manual_include: []
+  manual_exclude: []
+
+environment_detection:
+  method: metric_fallback
+  pump_columns:
+    - HMI_2_P_001_STATUS
+    - HMI_2_P_002_STATUS
+  num_states: 3
+  auto_detect_states: false
+  fallback_metric: HMI_2_LT_001.PV
+  fallback_threshold: 0.0
+  validation:
+    min_separation: 1.0
+    check_ordering: true
+
+clustering:
+  method: hdbscan
+  min_cluster_size: 20
+  state_aware: true
+
+validation:
+  check_separation: true
+  min_sigma_separation: 3.0
+
+output:
+  distributions_path: clustering_results/wadi_trace/learned_distributions.yaml
+  state_labels_path: clustering_results/wadi_trace/state_labels.csv

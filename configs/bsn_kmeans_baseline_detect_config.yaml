@@ -1,0 +1,9 @@
+# BSN RQ2 kmeans baseline 检测配置
+
+system_type: bsn
+baseline_models_dir: clustering_results/bsn/rq2_kmeans_baseline
+test_data_path: data/bsn/abnormal
+best_k_metric: f1
+
+output:
+  dir: detection_results/bsn/rq2_kmeans_baseline

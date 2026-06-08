@@ -1,0 +1,38 @@
+# Python/runtime artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local IDE/agent state
+.DS_Store
+.idea/
+.vscode/
+.claude/
+.codex/
+
+# Local experiment data and generated outputs
+data/
+data_validation/
+wadi-original/
+bsn_rubis_swat_evaluation_data/
+clustering_results/
+detection_results/
+baseline_results/
+baseline_results_smoke/
+validation_results/
+tmp-test/
+
+# Large or binary research artifacts kept outside source commits
+*.zip
+*.xlsx
+*.xls
+*.pdf
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak

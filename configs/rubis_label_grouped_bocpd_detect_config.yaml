@@ -1,0 +1,28 @@
+# RUBIS label-grouped baseline BOCPD 检测配置
+
+system_type: rubis
+learned_distributions: clustering_results/rubis/learned_distributions_label_grouped.yaml
+test_data_path: data/rubis/abnormal
+
+detection:
+  mode: bocpd
+  sigma_threshold: 3.0
+  aggregation_method: max_p_value
+  context_matching_strategy: nearest
+  apply_context_mu_shift: true
+  alarm_count_policy: binomial_confidence_bound
+  trace_alarm_confidence: 0.99
+  min_samples_for_detection: 1
+  bocpd:
+    hazard_lambda: 50
+    max_run_length: 200
+    state_prior: sample_count
+    changepoint_posterior_threshold: 0.5
+    raw_anomaly_rule: tail_only
+    tail_persistence_threshold: 2
+
+output:
+  dir: detection_results/rubis
+  generate_visualizations: true
+  save_anomaly_points: true
+  file_suffix: label_grouped_bocpd

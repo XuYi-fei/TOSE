@@ -1,0 +1,31 @@
+# WaDi Detection Configuration
+# For detecting anomalies using state-conditional logic
+
+dataset:
+  name: wadi
+  test_data_path: data/wadi/abnormal/  # Directory of test traces
+
+adapter:
+  type: wadi
+  # Metric selection should match clustering config
+  manual_include: []
+  manual_exclude: []
+
+# Detection configuration
+detection:
+  mode: state_conditional  # or 'hybrid'
+  state_threshold: 3.0  # Sigma threshold for current state
+  cross_state_threshold: 2.5  # Sigma for other states (hybrid mode)
+  distributions_path: clustering_results/wadi/learned_distributions.yaml
+
+# Environment state inference
+state_inference:
+  method: pump_status  # Infer state from pump status
+  pump_columns:
+    - HMI_2_P_001_STATUS
+    - HMI_2_P_002_STATUS
+
+# Output paths
+output:
+  results_csv: detection_results/wadi/detection_results.csv
+  results_json: detection_results/wadi/detection_results.json

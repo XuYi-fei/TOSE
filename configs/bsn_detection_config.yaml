@@ -1,0 +1,49 @@
+# BSN异常检测配置文件
+
+# 系统类型
+system_type: bsn
+
+# 学习到的分布参数文件路径（由聚类分析生成）
+learned_distributions: clustering_results/bsn/learned_distributions.yaml
+
+# 测试数据路径（包含异常trace的目录）
+test_data_path: data/bsn/abnormal
+
+# 异常检测参数
+detection:
+  # 检测模式：pointwise | bocpd
+  # mode: pointwise
+
+  # 点级阈值默认由 sigma_threshold 推导；3.0 对应双侧约 0.0027
+  sigma_threshold: 3.0
+
+  # 点级检测时，对所有候选簇分布取最大边缘概率
+  aggregation_method: max_p_value
+  context_matching_strategy: nearest
+  apply_context_mu_shift: true
+
+  # trace级报警触发策略：使用二项分布的一侧置信上界
+  alarm_count_policy: binomial_confidence_bound
+  trace_alarm_confidence: 0.99
+
+  # 兼容保留字段：当前RQ1正式流程不再用该字段决定是否报警
+  min_samples_for_detection: 1
+
+  # BOCPD 模式专用参数。仅在 mode: bocpd 时生效
+  # bocpd:
+  #   hazard_lambda: 50
+  #   max_run_length: 200
+  #   state_prior: sample_count
+  #   changepoint_posterior_threshold: 0.5
+  #   raw_anomaly_rule: cp_and_tail
+
+# 输出配置
+output:
+  # 输出目录
+  dir: detection_results/bsn
+
+  # 是否生成可视化图表（时间线、混淆矩阵等）
+  generate_visualizations: true
+
+  # 是否保存异常点详细信息到CSV
+  save_anomaly_points: true

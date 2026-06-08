@@ -1,0 +1,38 @@
+# RUBIS数据验证配置文件
+
+# 系统类型 (rubis 或 bsn)
+system_type: rubis
+
+# 数据集路径
+data_path: rubis_evaluation_data/eval_ident_traces
+
+# 输出目录
+output_dir: validation_results/rubis
+
+# 报告模式: simple（简单）或 detailed（详细）
+report_mode: detailed
+
+# 期望分布参数
+expected_distributions:
+  norm1:
+    mu: 0.0526
+    sigma: 0.0024
+    # min_resp_time: 0.0454  # 注释掉范围约束，只关注均值偏离
+    # max_resp_time: 0.0598
+
+  norm2:
+    mu: 0.1154
+    sigma: 0.0127
+    # min_resp_time: 0.0773
+    # max_resp_time: 0.1535
+
+  norm3:
+    mu: 0.0285
+    sigma: 0.0018
+    # min_resp_time: 0.0231
+    # max_resp_time: 0.0339
+
+# 验证参数
+validation:
+  deviation_threshold: 10.0  # 偏离阈值（百分比）
+  min_samples: 10            # 最小样本数

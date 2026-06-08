@@ -1,0 +1,9 @@
+# RUBIS RQ2 kmeans baseline 检测配置
+
+system_type: rubis
+baseline_models_dir: clustering_results/rubis/rq2_kmeans_baseline
+test_data_path: data/rubis/abnormal
+best_k_metric: f1
+
+output:
+  dir: detection_results/rubis/rq2_kmeans_baseline

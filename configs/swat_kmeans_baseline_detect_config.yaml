@@ -1,0 +1,9 @@
+# SWAT RQ2 kmeans baseline 检测配置
+
+system_type: swat
+baseline_models_dir: clustering_results/swat/rq2_kmeans_baseline
+test_data_path: data/swat/abnormal
+best_k_metric: f1
+
+output:
+  dir: detection_results/swat/rq2_kmeans_baseline

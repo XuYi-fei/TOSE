@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TOSE Detection Dashboard</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">TOSE Detection Dashboard</p>
+          <h1>异常检测交互看板</h1>
+          <p class="subtitle">
+            直接浏览辨识分布、identity 自检、abnormal 报警过程和 FP 前缀触发原因。
+          </p>
+        </div>
+        <div class="hero-actions">
+          <button id="rescanBtn" class="primary-btn">重新扫描结果</button>
+          <div class="meta-block">
+            <span>最近扫描</span>
+            <strong id="generatedAt">-</strong>
+          </div>
+        </div>
+      </header>
+
+      <section class="toolbar">
+        <label>
+          <span>System</span>
+          <select id="systemFilter"></select>
+        </label>
+        <label>
+          <span>Algorithm</span>
+          <select id="algorithmFilter"></select>
+        </label>
+        <label>
+          <span>Trace 分类</span>
+          <select id="classificationFilter">
+            <option value="all">全部</option>
+            <option value="FP">FP</option>
+            <option value="TP">TP</option>
+            <option value="FN">FN</option>
+            <option value="TN">TN</option>
+          </select>
+        </label>
+        <label class="search-box">
+          <span>搜索 trace</span>
+          <input id="traceSearch" type="search" placeholder="文件名 / 分布 / 关键词" />
+        </label>
+      </section>
+
+      <main class="layout">
+        <aside class="results-panel panel">
+          <div class="panel-title">
+            <h2>运行结果</h2>
+            <span id="resultCount" class="pill">0</span>
+          </div>
+          <div id="resultsList" class="results-list"></div>
+        </aside>
+
+        <section class="content">
+          <section class="overview-grid" id="overviewGrid"></section>
+
+          <section class="panel distribution-panel">
+            <div class="panel-title">
+              <h2>辨识分布</h2>
+              <span class="hint">分布较多时可在此区域内滚动；点击 trace 查看报警原因和触发点</span>
+            </div>
+            <div id="distributionGrid" class="distribution-grid"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-title">
+              <h2>分布对比视图</h2>
+              <span class="hint">identity 自检 vs FP 前缀偏离，对照看是不是分布本身导致高 FP</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>分布</th>
+                    <th>样本数</th>
+                    <th>参数</th>
+                    <th>Identity 自检</th>
+                    <th>FP 前缀</th>
+                    <th>判断</th>
+                  </tr>
+                </thead>
+                <tbody id="comparisonTableBody"></tbody>
+              </table>
+            </div>
+            <details class="glossary-card">
+              <summary>查看 Identity 自检指标说明</summary>
+              <div class="glossary-grid">
+                <article>
+                  <h3>Identity 自检</h3>
+                  <p>用 identity 正常数据做点级检查。每个点按它本应归属的正常分布判断是否越过边界，不走 abnormal 检测里的累计报警逻辑。</p>
+                </article>
+                <article>
+                  <h3>总点数</h3>
+                  <p>该分布在 identity 数据中参与自检的点数。这个数越大，自检统计越稳定。</p>
+                </article>
+                <article>
+                  <h3>越界点</h3>
+                  <p>落在该分布 3sigma 边界之外的点数。它表示正常数据自己就有多少点不符合当前分布。</p>
+                </article>
+                <article>
+                  <h3>越界占比</h3>
+                  <p>越界点除以总点数。这个值明显偏高时，说明高 FP 可能先来自分布本身拟合不足，而不是 abnormal 前缀额外漂移。</p>
+                </article>
+                <article>
+                  <h3>理论 3sigma</h3>
+                  <p>若数据确实服从该正态分布，理论上约有 0.27% 的点会落在 3sigma 之外。它是对照基线，不是经验结果。</p>
+                </article>
+                <article>
+                  <h3>映射来源</h3>
+                  <p>说明当前统计是如何映射到这个聚类分布上的。精确匹配表示标签直接对应；dominant norm 或后缀聚合表示 cluster 标签与 identity 标签不同，系统按主标签或 norm1、norm2、norm3 后缀做回落匹配。</p>
+                </article>
+                <article>
+                  <h3>FP 前缀</h3>
+                  <p>只统计 abnormal trace 在 abn1 之前的正常前缀中，那些最终被判为 FP 的样例所出现的偏离情况。</p>
+                </article>
+                <article>
+                  <h3>判断</h3>
+                  <p>分布自身偏重尾表示 identity 自检已经偏高；前缀额外偏移表示正常 identity 还好，但 abnormal 前缀更偏；混合因素表示两边都有影响。</p>
+                </article>
+              </div>
+            </details>
+          </section>
+
+          <section class="panel">
+            <div class="panel-title">
+              <h2>Trace 列表</h2>
+              <span id="traceCount" class="pill">0</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>文件</th>
+                    <th>分类</th>
+                    <th>长度</th>
+                    <th>报警位置</th>
+                    <th>前缀 n</th>
+                    <th>偏离点</th>
+                    <th>容忍数</th>
+                    <th>触发原因</th>
+                  </tr>
+                </thead>
+                <tbody id="traceTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <aside class="detail-panel panel">
+          <div class="panel-title">
+            <h2>Trace 详情</h2>
+            <span id="detailTitle" class="hint">选择一条 trace</span>
+          </div>
+          <div id="detailEmpty" class="empty-state">
+            选择左侧结果和中间 trace 后，这里会显示报警时的数据、偏离分布和前缀累计情况。
+          </div>
+          <div id="detailContent" class="detail-content hidden">
+            <div class="detail-cards" id="detailCards"></div>
+            <div class="panel inset">
+              <div class="panel-title">
+                <h3>触发原因</h3>
+              </div>
+              <div id="triggerReason"></div>
+            </div>
+            <div class="panel inset">
+              <div class="panel-title">
+                <h3>时间序列</h3>
+              </div>
+              <div id="seriesChart" class="chart-box"></div>
+            </div>
+            <div class="panel inset">
+              <div class="panel-title">
+                <h3>报警窗口</h3>
+              </div>
+              <div class="table-wrap compact">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>time</th>
+                      <th>value</th>
+                      <th>segment</th>
+                      <th>is anomaly</th>
+                      <th>closest dist</th>
+                      <th>p-value</th>
+                    </tr>
+                  </thead>
+                  <tbody id="triggerWindowBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </main>
+    </div>
+    <script src="/app.js"></script>
+  </body>
+  </html>

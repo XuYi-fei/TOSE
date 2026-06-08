@@ -1,0 +1,16 @@
+# SWAT label-grouped baseline 训练配置
+
+system_type: swat
+data_path: data/swat/identity
+
+candidate_distributions:
+  - norm
+  - lognorm
+  - gamma
+  - weibull_min
+
+normality_alpha: 0.05
+
+output:
+  dir: clustering_results/swat
+  learned_distributions_path: clustering_results/swat/learned_distributions_label_grouped.yaml
