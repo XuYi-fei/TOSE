@@ -110,9 +110,15 @@ class AnomalyDetector:
         self.context_calibration_model = context_calibration_model
         self.context_matching_strategy = context_matching_strategy
         self.apply_context_mu_shift = apply_context_mu_shift
+        self.partition_context_features: List[str] = []
         self._distributions_by_context_key: Dict[Optional[str], Dict[str, LearnedDistribution]] = {}
+        self._distributions_by_partition_context_key: Dict[Optional[str], Dict[str, LearnedDistribution]] = {}
         for label, distribution in self.distributions.items():
             self._distributions_by_context_key.setdefault(distribution.context_key, {})[label] = distribution
+            self._distributions_by_partition_context_key.setdefault(
+                distribution.partition_context_key,
+                {},
+            )[label] = distribution
         self._context_candidate_cache: Dict[
             Tuple[Optional[str], Tuple[Tuple[str, float], ...]],
             Tuple[Dict[str, LearnedDistribution], Optional[str], str],
@@ -148,7 +154,7 @@ class AnomalyDetector:
         config, distributions = _load_learned_distribution_bundle(yaml_path)
         logger.info("从%s加载了%s个分布", yaml_path, len(distributions))
 
-        return cls(
+        detector = cls(
             distributions=distributions,
             sigma_threshold=sigma_threshold,
             p_value_alpha=p_value_alpha,
@@ -162,6 +168,9 @@ class AnomalyDetector:
             context_matching_strategy=config.get("context_matching_strategy", "nearest"),
             apply_context_mu_shift=bool(config.get("apply_context_mu_shift", True)),
         )
+
+        detector.partition_context_features = list(config.get("partition_context_features", []))
+        return detector
 
     def reset_trace_state(self) -> None:
         """为统一评估器提供兼容接口。pointwise 模式无需维护 trace 状态。"""
@@ -298,6 +307,20 @@ class AnomalyDetector:
         if cached is not None:
             return cached
 
+        if self.partition_context_features:
+            partition_features = {
+                feature_name: float(context_features[feature_name])
+                for feature_name in self.partition_context_features
+                if feature_name in context_features
+            }
+            if partition_features:
+                partition_key = self._build_context_key(partition_features)
+                exact_partition = self._distributions_by_partition_context_key.get(partition_key, {})
+                if exact_partition:
+                    selected = (exact_partition, partition_key, "partition_exact")
+                    self._context_candidate_cache[cache_key] = selected
+                    return selected
+
         if context_key:
             exact = self._distributions_by_context_key.get(context_key, {})
             if exact:
@@ -316,6 +339,13 @@ class AnomalyDetector:
         selected = (self.distributions, None, "global")
         self._context_candidate_cache[cache_key] = selected
         return selected
+
+    @staticmethod
+    def _build_context_key(context_features: Dict[str, float]) -> Optional[str]:
+        if not context_features:
+            return None
+        items = [f"{key}={float(context_features[key]):.6f}" for key in sorted(context_features.keys())]
+        return "|".join(items)
 
     def _nearest_context_distributions(
         self,

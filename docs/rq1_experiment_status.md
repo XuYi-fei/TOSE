@@ -78,9 +78,13 @@ LODO 数据与结果目录：
    - 解析器可为每个 identity segment 提取 `context_key/context_features`
    - `learned_distributions_<algorithm>.yaml` 顶层可导出 `context_calibration_model`
    - 检测时先做 exact/nearest 上下文匹配，再用线性 `mu` 校准对 cluster 分布做位置平移
-7. 已新增统一矩阵脚本：
+7. 已把 `bsn` 的 `sensor_index` 纳入统一主链路的 stage-1 分区键：
+   - 辨识阶段先按 `sensor_index` 分区，再在分区内做自由聚类
+   - learned distributions 会额外导出 `partition_context_key/partition_context_features`
+   - 检测阶段先按 `sensor_index` 做 `partition_exact` 候选筛选，再在该 `sensor` 对应的 learned distributions 内比较尾概率
+8. 已新增统一矩阵脚本：
    - [scripts/run_rq1_detection_matrix.py](/Users/xuyifei/NJU/repos/TOSE/scripts/run_rq1_detection_matrix.py)
-8. 已新增论文 RQ1 五方法统一 runner：
+9. 已新增论文 RQ1 五方法统一 runner：
    - [scripts/run_rq1_methods_matrix.py](/Users/xuyifei/NJU/repos/TOSE/scripts/run_rq1_methods_matrix.py)
    - 方法维度统一为 `SWD`、`ARD`、`PRD`、`GPD`、`GROUP`
    - 其中 `GROUP` 不再展开四个聚类算法，而是读取 `clustering_results/<system>/learned_distributions.yaml`，即聚类阶段选出的最佳算法结果。
@@ -114,6 +118,10 @@ python3 cluster.py --config configs/<system>_clustering_config.yaml
 - `distribution_modeling.normality_alpha: 0.05`
 - `distribution_modeling.enable_context_calibration: true`
 - `distribution_modeling.context_modeling_method: linear_mu`
+
+其中 `bsn` 额外启用：
+
+- `distribution_modeling.partition_context_features: [sensor_index]`
 
 因此每个 system 都会导出：
 
@@ -159,11 +167,12 @@ python3 detect.py --config configs/<system>_detection_config.yaml
 
 1. 对每个点，先由系统解析器提取该点所属的 `context_key/context_features`。
 2. 检测器先在 learned distributions 中做 exact/nearest 上下文匹配，缩小候选簇集合。
-3. 若 learned YAML 顶层包含 `context_calibration_model`，则先按 identity 学到的上下文-均值关系，对候选 cluster distribution 的位置参数做线性平移。
-4. 对平移后的候选分布分别计算双侧边缘概率，并用 `max_p_value` 选择“最能解释该点”的簇分布。
-5. 若该最大边缘概率 `< alpha`，该点记为 raw anomaly，其中默认 `alpha` 由 `sigma_threshold=3.0` 推导得到，约为 `0.0027`。
-6. 在第 `n` 个已观测点时，允许累计 raw anomaly 数取 `Binomial(n, alpha)` 在置信度 `0.99` 下的一侧上界。
-7. 只有当累计 raw anomaly 数 `>` 该上界时，才记为真正报警。
+3. 对于 `bsn`，若 learned YAML 声明了 `partition_context_features: [sensor_index]`，则检测器优先按 `sensor_index` 做 `partition_exact` 路由。
+4. 若 learned YAML 顶层包含 `context_calibration_model`，则先按 identity 学到的上下文-均值关系，对候选 cluster distribution 的位置参数做线性平移。
+5. 对平移后的候选分布分别计算双侧边缘概率，并用 `max_p_value` 选择“最能解释该点”的簇分布。
+6. 若该最大边缘概率 `< alpha`，该点记为 raw anomaly，其中默认 `alpha` 由 `sigma_threshold=3.0` 推导得到，约为 `0.0027`。
+7. 在第 `n` 个已观测点时，允许累计 raw anomaly 数取 `Binomial(n, alpha)` 在置信度 `0.99` 下的一侧上界。
+8. 只有当累计 raw anomaly 数 `>` 该上界时，才记为真正报警。
 
 统一批量重跑入口：
 
@@ -465,6 +474,30 @@ python3 scripts/run_rq1_methods_matrix.py --output-dir rq_results/rq1
 - 本轮曾尝试重跑四聚类算法的完整 GROUP detection matrix；由于 `affinity_propagation` 在 BSN/SWAT 产生数百到上千个簇，检测耗时过高，已终止该长任务，不作为本次 Excel RQ1 填表依据。
 
 ## Current Interpretation
+
+### 2026-06-13 BSN Sensor-Partitioned Update
+
+本轮对 `bsn` 做了统一主链路层面的进一步修正：
+
+- clustering 侧新增 `partition_context_features`
+- `configs/bsn_clustering_config.yaml` 固定使用 `sensor_index` 作为 stage-1 分区键
+- detector 侧优先按 `partition_context_key` 选择候选 learned distributions
+
+已完成的聚焦验证：
+
+- `python3 -m unittest tests.test_sensor_partitioned_clustering tests.test_context_conditioned_detection tests.test_rq1_lodo_dataset tests.test_rq1_lodo_runner`
+- `python3 -m compileall common/models/distribution.py anomaly_detection/core/distribution.py anomaly_detection/core/detector.py cluster_analysis/config/config.py cluster_analysis/cli.py cluster_analysis/core/engine.py cluster_analysis/visualization/reporter.py tests/test_sensor_partitioned_clustering.py tests/test_context_conditioned_detection.py`
+
+对新输出结果的抽样确认：
+
+- [detection_results_GROUP.json](/Users/xuyifei/NJU/repos/TOSE/rq_results/rq1_lodo_partitioned_bsn/bsn/holdout_sensor0_norm1/bsn/GROUP/detection_results_GROUP.json)
+  - `context_match_strategy = partition_exact`
+  - `matched_context_key = sensor_index=0.000000`
+
+这说明当前 `bsn` 检测已经不是“跨 sensor 串配”问题。剩余高 `FP` 的根因已经收敛为：
+
+- 同一 `sensor` 内部，abnormal 前缀中的正常点仍明显偏离该 `sensor` 对应的 learned distributions
+- 或者同一 `sensor` 内不同 normal 分布之间仍存在训练/测试漂移，导致尾概率持续偏低
 
 ### Direct Observations
 

@@ -72,6 +72,7 @@ def run_clustering(config_path: str, output_dir: str = None, verbose: bool = Fal
             normality_alpha=config.normality_alpha,
             enable_context_calibration=config.enable_context_calibration,
             context_modeling_method=config.context_modeling_method,
+            partition_context_features=config.partition_context_features,
             boundary_trim_points=config.boundary_trim_points,
         )
 

@@ -285,6 +285,10 @@ class ClusteringReporter:
         if clustering_config_path:
             config_data['clustering_config'] = str(clustering_config_path)
 
+        partition_context_features = selected_result.additional_metrics.get('partition_context_features')
+        if partition_context_features:
+            config_data['partition_context_features'] = list(partition_context_features)
+
         distributions = self._build_distribution_export(selected_result, stats)
 
         context_calibration_model = selected_result.additional_metrics.get('context_calibration_model')

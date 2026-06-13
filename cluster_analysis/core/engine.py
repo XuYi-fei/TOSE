@@ -33,6 +33,7 @@ class ClusteringEngine:
         normality_alpha: float = 0.05,
         enable_context_calibration: bool = True,
         context_modeling_method: str = "linear_mu",
+        partition_context_features: Optional[List[str]] = None,
         boundary_trim_points: int = 0,
     ):
         """初始化聚类引擎
@@ -52,6 +53,7 @@ class ClusteringEngine:
         )
         self.enable_context_calibration = enable_context_calibration
         self.context_modeling_method = context_modeling_method
+        self.partition_context_features = list(partition_context_features or [])
 
         # 创建解析器
         self.parser = ParserFactory.create(
@@ -94,6 +96,7 @@ class ClusteringEngine:
         for trace_file in trace_files:
             try:
                 parameters = self.parser.parse_file(trace_file)
+                self._attach_partition_context(parameters)
                 all_parameters.extend(parameters)
                 parsed_count += 1
             except Exception as e:
@@ -204,9 +207,19 @@ class ClusteringEngine:
                 algorithm = ClusteringFactory.create(algo_name, **params)
 
                 # 执行聚类
-                algo_result = algorithm.run(clustering_matrix)
+                if self.partition_context_features:
+                    algo_result = self._run_partitioned_algorithm(
+                        algo_name,
+                        feature_matrix,
+                        clustering_matrix,
+                        parameters,
+                    )
+                else:
+                    algo_result = algorithm.run(clustering_matrix)
                 algo_result.cluster_centers = self._calculate_report_space_centers(feature_matrix, algo_result.labels)
                 algo_result.additional_metrics['stage1_clustering_feature'] = self.stage1_clustering_feature
+                if self.partition_context_features:
+                    algo_result.additional_metrics['partition_context_features'] = list(self.partition_context_features)
                 algo_result.additional_metrics['cluster_distribution_models'] = self._fit_cluster_distribution_models(
                     parameters,
                     algo_result.labels,
@@ -236,6 +249,86 @@ class ClusteringEngine:
             logger.warning("未找到有效的聚类结果")
 
         return result
+
+    def _attach_partition_context(self, parameters: List[DistributionParameters]) -> None:
+        if not self.partition_context_features:
+            return
+
+        for parameter in parameters:
+            partition_features = {
+                feature_name: float(parameter.context_features[feature_name])
+                for feature_name in self.partition_context_features
+                if feature_name in parameter.context_features
+            }
+            parameter.partition_context_features = partition_features
+            parameter.partition_context_key = build_context_key(partition_features)
+
+    def _run_partitioned_algorithm(
+        self,
+        algorithm_name: str,
+        feature_matrix: np.ndarray,
+        clustering_matrix: np.ndarray,
+        parameters: List[DistributionParameters],
+    ) -> AlgorithmResult:
+        partition_groups: Dict[str, List[int]] = {}
+        for index, parameter in enumerate(parameters):
+            key = parameter.partition_context_key or "__global__"
+            partition_groups.setdefault(key, []).append(index)
+
+        global_labels = np.full(len(parameters), -1, dtype=int)
+        global_centers: List[np.ndarray] = []
+        cluster_offset = 0
+        execution_time = 0.0
+        silhouette_parts: List[float] = []
+        partition_summaries: Dict[str, Dict[str, object]] = {}
+
+        for partition_key in sorted(partition_groups.keys()):
+            indices = partition_groups[partition_key]
+            partition_matrix = clustering_matrix[indices]
+            algorithm = ClusteringFactory.create(
+                algorithm_name,
+                **self.algorithm_params.get(algorithm_name, {}),
+            )
+            partition_result = algorithm.run(partition_matrix)
+            execution_time += partition_result.execution_time
+
+            unique_labels = sorted(int(label) for label in np.unique(partition_result.labels) if label >= 0)
+            label_mapping = {
+                old_label: cluster_offset + new_index
+                for new_index, old_label in enumerate(unique_labels)
+            }
+            remapped_labels = np.asarray(
+                [label_mapping.get(int(label), -1) for label in partition_result.labels],
+                dtype=int,
+            )
+            for local_index, global_index in enumerate(indices):
+                global_labels[global_index] = remapped_labels[local_index]
+
+            if partition_result.cluster_centers is not None:
+                global_centers.extend(np.asarray(partition_result.cluster_centers, dtype=float))
+
+            if partition_result.silhouette_score is not None:
+                silhouette_parts.append(float(partition_result.silhouette_score))
+
+            partition_summaries[partition_key] = {
+                "size": len(indices),
+                "n_clusters": partition_result.n_clusters,
+                "cluster_id_offset": cluster_offset,
+            }
+            cluster_offset += len(unique_labels)
+
+        return AlgorithmResult(
+            algorithm_name=algorithm_name,
+            n_clusters=cluster_offset,
+            labels=global_labels,
+            cluster_centers=np.asarray(global_centers, dtype=float) if global_centers else None,
+            silhouette_score=(float(np.mean(silhouette_parts)) if silhouette_parts else None),
+            execution_time=execution_time,
+            additional_metrics={
+                "partition_summaries": partition_summaries,
+                "partition_context_features": list(self.partition_context_features),
+            },
+        )
 
     def _calculate_report_space_centers(self, feature_matrix: np.ndarray, labels: np.ndarray) -> Optional[np.ndarray]:
         valid_cluster_ids = sorted(int(label) for label in np.unique(labels) if label >= 0)
@@ -272,6 +365,11 @@ class ClusteringEngine:
                 model_dict['context_key'] = context_key
             if context_features:
                 model_dict['context_features'] = context_features
+            partition_context_key, partition_context_features = self._summarize_cluster_partition_context(cluster_parameters)
+            if partition_context_key is not None:
+                model_dict['partition_context_key'] = partition_context_key
+            if partition_context_features:
+                model_dict['partition_context_features'] = partition_context_features
             cluster_models[cluster_id] = model_dict
 
         return cluster_models
@@ -291,6 +389,27 @@ class ClusteringEngine:
         summarized = {
             feature_name: float(np.mean([
                 parameter.context_features.get(feature_name, 0.0)
+                for parameter in parameters
+            ]))
+            for feature_name in feature_names
+        }
+        return build_context_key(summarized), summarized
+
+    def _summarize_cluster_partition_context(
+        self,
+        parameters: List[DistributionParameters],
+    ) -> Tuple[Optional[str], Dict[str, float]]:
+        feature_names = sorted({
+            key
+            for parameter in parameters
+            for key in parameter.partition_context_features.keys()
+        })
+        if not feature_names:
+            return None, {}
+
+        summarized = {
+            feature_name: float(np.mean([
+                parameter.partition_context_features.get(feature_name, 0.0)
                 for parameter in parameters
             ]))
             for feature_name in feature_names

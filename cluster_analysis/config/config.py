@@ -28,6 +28,7 @@ class ClusteringConfig:
     normality_alpha: float = 0.05  # stage-2 正态性检验阈值
     enable_context_calibration: bool = True  # 是否拟合上下文到均值的线性校准模型
     context_modeling_method: str = 'linear_mu'  # 上下文校准模型类型
+    partition_context_features: List[str] = field(default_factory=list)  # stage-1 聚类前的上下文分区键
     boundary_trim_points: int = 0  # identity 中切换边界前后各剔除的点数
 
     @classmethod
@@ -78,6 +79,7 @@ class ClusteringConfig:
         normality_alpha = float(distribution_modeling.get('normality_alpha', 0.05))
         enable_context_calibration = bool(distribution_modeling.get('enable_context_calibration', True))
         context_modeling_method = distribution_modeling.get('context_modeling_method', 'linear_mu')
+        partition_context_features = list(distribution_modeling.get('partition_context_features', []))
         boundary_trim_points = int(distribution_modeling.get('boundary_trim_points', 0))
 
         # 构建配置对象
@@ -97,6 +99,7 @@ class ClusteringConfig:
             normality_alpha=normality_alpha,
             enable_context_calibration=enable_context_calibration,
             context_modeling_method=context_modeling_method,
+            partition_context_features=partition_context_features,
             boundary_trim_points=boundary_trim_points,
         )
 
@@ -165,6 +168,9 @@ class ClusteringConfig:
                 f"支持的类型: {sorted(valid_context_methods)}"
             )
 
+        if not isinstance(self.partition_context_features, list):
+            raise ValueError("partition_context_features必须是列表类型")
+
     def to_dict(self) -> dict:
         """转换为字典
 
@@ -190,6 +196,7 @@ class ClusteringConfig:
                 'normality_alpha': self.normality_alpha,
                 'enable_context_calibration': self.enable_context_calibration,
                 'context_modeling_method': self.context_modeling_method,
+                'partition_context_features': self.partition_context_features,
                 'boundary_trim_points': self.boundary_trim_points,
             }
         }

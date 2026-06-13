@@ -40,6 +40,8 @@ class LearnedDistribution:
     support: Dict[str, Optional[float]] = field(default_factory=dict)
     context_key: Optional[str] = None
     context_features: Dict[str, float] = field(default_factory=dict)
+    partition_context_key: Optional[str] = None
+    partition_context_features: Dict[str, float] = field(default_factory=dict)
 
     def __post_init__(self):
         if self.distribution_type not in SUPPORTED_DISTRIBUTIONS:
@@ -172,6 +174,11 @@ class LearnedDistribution:
                 str(key): float(value)
                 for key, value in (data.get("context_features") or {}).items()
             },
+            partition_context_key=data.get("partition_context_key"),
+            partition_context_features={
+                str(key): float(value)
+                for key, value in (data.get("partition_context_features") or {}).items()
+            },
         )
 
     def to_dict(self) -> Dict[str, object]:
@@ -191,4 +198,6 @@ class LearnedDistribution:
             "support": self.support,
             "context_key": self.context_key,
             "context_features": self.context_features,
+            "partition_context_key": self.partition_context_key,
+            "partition_context_features": self.partition_context_features,
         }

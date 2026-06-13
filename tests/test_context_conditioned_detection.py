@@ -221,6 +221,74 @@ class ContextConditionedDetectionTests(unittest.TestCase):
         self.assertEqual(result.closest_distribution, "cluster_1")
         self.assertEqual(call_count["value"], len(distributions))
 
+    def test_detector_routes_candidates_by_partition_context_first(self):
+        from anomaly_detection.core.detector import AnomalyDetector
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yaml_path = Path(tmpdir) / "learned_distributions.yaml"
+            yaml_path.write_text(
+                yaml.dump(
+                    {
+                        "system_type": "bsn",
+                        "algorithm": "gmm",
+                        "partition_context_features": ["sensor_index"],
+                        "distributions": {
+                            "sensor0_norm1": {
+                                "distribution_type": "norm",
+                                "fitted_params": {"shape_args": [], "loc": 0.9000, "scale": 0.01},
+                                "mu": 0.9000,
+                                "sigma": 0.01,
+                                "variance": 0.0001,
+                                "sample_count": 100,
+                                "cluster_id": 0,
+                                "context_key": "sensor_index=0.000000|state=1.000000",
+                                "context_features": {"sensor_index": 0.0, "state": 1.0},
+                                "partition_context_key": "sensor_index=0.000000",
+                                "partition_context_features": {"sensor_index": 0.0},
+                            },
+                            "sensor0_norm2": {
+                                "distribution_type": "norm",
+                                "fitted_params": {"shape_args": [], "loc": 1.0350, "scale": 0.01},
+                                "mu": 1.0350,
+                                "sigma": 0.01,
+                                "variance": 0.0001,
+                                "sample_count": 100,
+                                "cluster_id": 1,
+                                "context_key": "sensor_index=0.000000|state=2.000000",
+                                "context_features": {"sensor_index": 0.0, "state": 2.0},
+                                "partition_context_key": "sensor_index=0.000000",
+                                "partition_context_features": {"sensor_index": 0.0},
+                            },
+                            "sensor2_norm3": {
+                                "distribution_type": "norm",
+                                "fitted_params": {"shape_args": [], "loc": 0.9675, "scale": 0.01},
+                                "mu": 0.9675,
+                                "sigma": 0.01,
+                                "variance": 0.0001,
+                                "sample_count": 100,
+                                "cluster_id": 2,
+                                "context_key": "sensor_index=2.000000|state=3.000000",
+                                "context_features": {"sensor_index": 2.0, "state": 3.0},
+                                "partition_context_key": "sensor_index=2.000000",
+                                "partition_context_features": {"sensor_index": 2.0},
+                            },
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            detector = AnomalyDetector.from_yaml(str(yaml_path), sigma_threshold=3.0)
+            result = detector.detect_point(
+                0.9675,
+                context_features={"sensor_index": 0.0, "state": 99.0},
+            )
+
+            self.assertEqual(result.matched_context_key, "sensor_index=0.000000")
+            self.assertEqual(result.context_match_strategy, "partition_exact")
+            self.assertEqual({item["distribution_label"] for item in result.top_matches}, {"sensor0_norm1", "sensor0_norm2"})
+            self.assertNotEqual(result.closest_distribution, "sensor2_norm3")
+
 
 if __name__ == "__main__":
     unittest.main()

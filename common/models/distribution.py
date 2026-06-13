@@ -22,6 +22,8 @@ class DistributionParameters:
     raw_values: Optional[List[float]] = None  # 原始样本值
     context_key: Optional[str] = None  # 该段所属的上下文键
     context_features: Dict[str, float] = field(default_factory=dict)  # 连续上下文特征
+    partition_context_key: Optional[str] = None  # stage-1 分区聚类使用的上下文键
+    partition_context_features: Dict[str, float] = field(default_factory=dict)  # stage-1 分区上下文特征
 
 
 @dataclass

@@ -40,6 +40,8 @@ distribution_modeling:
     - lognorm
     - gamma
     - weibull_min
+  partition_context_features:
+    - sensor_index
   normality_alpha: 0.05
   enable_context_calibration: true
   context_modeling_method: linear_mu
