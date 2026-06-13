@@ -24,6 +24,46 @@ RQ1 当前目标是评估：
 
 最终目标是形成 `4 x 4 = 16` 组辨识-检测结果矩阵。
 
+## LODO Reconstruction
+
+2026-06-13 新增了一套独立于旧 `data/<system>` 的 RQ1 LODO 评估链路，用于把“异常段完全来自训练时被留出的分布单元”这一定义固定下来。
+
+LODO 的核心约束：
+
+- 测试数据完全由已有 `identity` 段重新拼接生成。
+- abnormal trace 的异常段始终位于最后一段，评估口径仍使用文件名中的 `abn1_start_time`。
+- `rubis`、`swat`、`wadi` 的 holdout 单元是 identity 文件名中的 `norm1/norm2/norm3`。
+- `bsn` 的 holdout 单元是 `sensor_index + norm_label`，例如 `sensor3_norm2`。
+- 对某个 holdout 单元 `u`：
+  - 训练 identity 只使用 `D - {u}`
+  - abnormal 前缀只使用 `D - {u}`
+  - abnormal 最后一段只使用 `{u}`
+
+对应标准化脚本：
+
+- [build_rq1_lodo_dataset.py](/Users/xuyifei/NJU/repos/TOSE/scripts/build_rq1_lodo_dataset.py)
+- [build_rq1_lodo_group_distributions.py](/Users/xuyifei/NJU/repos/TOSE/scripts/build_rq1_lodo_group_distributions.py)
+- [run_rq1_lodo_methods_matrix.py](/Users/xuyifei/NJU/repos/TOSE/scripts/run_rq1_lodo_methods_matrix.py)
+- [run_rq1_lodo_pipeline.py](/Users/xuyifei/NJU/repos/TOSE/scripts/run_rq1_lodo_pipeline.py)
+
+相关实现：
+
+- [rq_methods/lodo_dataset.py](/Users/xuyifei/NJU/repos/TOSE/rq_methods/lodo_dataset.py)
+- [rq_methods/lodo_runner.py](/Users/xuyifei/NJU/repos/TOSE/rq_methods/lodo_runner.py)
+
+LODO 数据与结果目录：
+
+- `data_rq1_lodo/`
+- `clustering_results_rq1_lodo/`
+- `rq_results/rq1_lodo/`
+
+本轮 holdout 数量：
+
+- `rubis`: 3
+- `bsn`: 18
+- `swat`: 3
+- `wadi`: 3
+
 ## Current Scope
 
 当前 RQ1 已完成：
@@ -258,6 +298,57 @@ RQ1 相关代码入口和关键落点：
 
 - `rubis`、`swat`、`wadi` 使用单 detector。
 - `bsn` 使用 ASE 风格 6 detector MultiDetector，每个 `/g3t1_1` 到 `/g3t1_6` sensor 独立辨识和检测。
+
+## LODO Method Matrix
+
+LODO 五方法统一汇总文件：
+
+- [rq1_lodo_per_holdout_summary.csv](/Users/xuyifei/NJU/repos/TOSE/rq_results/rq1_lodo/summary/rq1_lodo_per_holdout_summary.csv)
+- [rq1_lodo_per_holdout_summary.json](/Users/xuyifei/NJU/repos/TOSE/rq_results/rq1_lodo/summary/rq1_lodo_per_holdout_summary.json)
+- [rq1_lodo_system_summary.csv](/Users/xuyifei/NJU/repos/TOSE/rq_results/rq1_lodo/summary/rq1_lodo_system_summary.csv)
+- [rq1_lodo_system_summary.json](/Users/xuyifei/NJU/repos/TOSE/rq_results/rq1_lodo/summary/rq1_lodo_system_summary.json)
+
+系统级汇总结果：
+
+| System | Method | FN | FP | MTD | Precision | Recall | F1 |
+|---|---|---:|---:|---:|---:|---:|---:|
+| rubis | GROUP | 0.00 | 10.83 | 3.46 | 0.8917 | 1.0000 | 0.9419 |
+| rubis | SWD | 33.00 | 0.67 | 5.48 | 0.6633 | 0.6667 | 0.6650 |
+| rubis | PRD | 66.67 | 0.00 | 0.33 | 0.3333 | 0.3333 | 0.3333 |
+| rubis | GPD | 51.50 | 0.00 | 123.64 | 0.6667 | 0.4850 | 0.5418 |
+| rubis | ARD | 0.17 | 88.33 | 8.51 | 0.1152 | 0.9848 | 0.2047 |
+| bsn | GROUP | 0.00 | 92.28 | 2.57 | 0.0772 | 0.7222 | 0.1379 |
+| bsn | SWD | 32.72 | 1.53 | 5.85 | 0.6575 | 0.6667 | 0.6620 |
+| bsn | PRD | 33.33 | 0.00 | 5.28 | 0.6667 | 0.6667 | 0.6667 |
+| bsn | GPD | 72.72 | 0.00 | 131.54 | 0.6667 | 0.2728 | 0.3856 |
+| bsn | ARD | 0.00 | 100.00 | 0.00 | 0.0000 | 0.0000 | 0.0000 |
+| swat | GROUP | 0.00 | 4.17 | 3.53 | 0.9583 | 1.0000 | 0.9787 |
+| swat | SWD | 33.00 | 1.33 | 2.71 | 0.6567 | 0.6667 | 0.6616 |
+| swat | PRD | 33.33 | 32.33 | 0.67 | 0.3433 | 0.6667 | 0.4467 |
+| swat | GPD | 31.83 | 34.67 | 5.93 | 0.3350 | 0.6667 | 0.4425 |
+| swat | ARD | 0.00 | 74.50 | 1.00 | 0.2550 | 1.0000 | 0.3830 |
+| wadi | GROUP | 0.83 | 0.00 | 8.79 | 1.0000 | 0.9917 | 0.9958 |
+| wadi | SWD | 33.00 | 1.00 | 11.15 | 0.6600 | 0.6667 | 0.6633 |
+| wadi | PRD | 49.83 | 0.00 | 28.75 | 0.6667 | 0.5017 | 0.5702 |
+| wadi | GPD | 31.00 | 7.33 | 17.94 | 0.6167 | 0.6667 | 0.6405 |
+| wadi | ARD | 0.00 | 99.33 | 0.67 | 0.0067 | 0.6667 | 0.0132 |
+
+当前结论：
+
+- 在 `rubis`、`swat`、`wadi` 上，`GROUP` 在 LODO 设定下是最优或接近最优方法，尤其 `swat` 和 `wadi` 明显优于四个 baseline。
+- `wadi` 的 `GROUP` 结果最稳定，`FP=0`，`FN=0.83`，F1 达到 `0.9958`。
+- `rubis` 和 `swat` 的 `GROUP` 仍有少量前缀误报，但已经显著优于 `ARD`，也优于高 `FN` 的 `PRD/GPD`。
+- `bsn` 仍然是当前最突出的问题系统：`GROUP` 在新的 LODO 定义下出现了结构性的高 `FP=92.28`。这说明即使 abnormal 后缀严格取自留出分布单元，BSN 的“多传感器联合 trace + 单传感器 holdout 语义”之间仍存在较强的不一致，需要继续单独定位。
+
+一些关键 holdout 观察：
+
+- `rubis/GROUP` 的 3 个 holdout 都选到 `gmm`，且每个 holdout 的 `cluster_count=2`。
+- `swat/GROUP` 的 3 个 holdout 都选到 `gmm`，且误报稳定在 `2%`、`5%`、`5.5%` 一带。
+- `wadi/GROUP` 的 3 个 holdout 最佳算法并不一致：
+  - `norm1`: `gmm`, `cluster_count=4`
+  - `norm2`: `mean_shift`, `cluster_count=3`
+  - `norm3`: `hdbscan`, `cluster_count=19`
+- `bsn/GROUP` 的 18 个 holdout 几乎都选到 `gmm`，但像 `sensor0_norm1`、`sensor0_norm2` 这类 holdout 会直接 `FP=100%`，说明问题不在少数边界 case，而是集中在 BSN 的数据语义和检测口径不匹配。
 - BSN trace 的 `sensor_index` 是目标异常 sensor；首次报警必须只来自该目标 sensor 才计为 TP，否则按 FP 处理。
 
 baseline 方法：

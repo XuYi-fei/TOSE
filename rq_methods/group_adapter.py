@@ -94,6 +94,16 @@ class GroupMethodRunner:
         self.detection_mode_override = detection_mode_override
 
     def run_system(self, system: str) -> dict[str, Any]:
+        return self.run_system_with_overrides(system)
+
+    def run_system_with_overrides(
+        self,
+        system: str,
+        *,
+        learned_path: Path | None = None,
+        test_data_path: Path | None = None,
+        output_dir: Path | None = None,
+    ) -> dict[str, Any]:
         if system not in self.config_map:
             raise KeyError(f"缺少 {system} 的 GROUP 检测配置")
 
@@ -102,13 +112,20 @@ class GroupMethodRunner:
         if self.detection_mode_override:
             config.detection.mode = self.detection_mode_override
 
-        learned_path = self.learned_root / system / "learned_distributions.yaml"
-        if not learned_path.exists():
-            raise FileNotFoundError(f"缺少最佳聚类辨识结果: {learned_path}")
-        config.learned_distributions = str(learned_path)
-        config.output.dir = str(self.output_dir / system / "GROUP")
+        resolved_learned_path = learned_path or (self.learned_root / system / "learned_distributions.yaml")
+        if not resolved_learned_path.exists():
+            raise FileNotFoundError(f"缺少最佳聚类辨识结果: {resolved_learned_path}")
+        config.learned_distributions = str(resolved_learned_path)
 
-        detector = _build_detector(config, learned_path)
+        if test_data_path is not None:
+            config.test_data_path = str(test_data_path)
+
+        if output_dir is not None:
+            config.output.dir = str(output_dir / system / "GROUP")
+        else:
+            config.output.dir = str(self.output_dir / system / "GROUP")
+
+        detector = _build_detector(config, resolved_learned_path)
         evaluator = AnomalyEvaluator(
             detector,
             config.system_type,
@@ -154,4 +171,4 @@ class GroupMethodRunner:
         reporter.generate_json_report(aggregate, config.system_type, str(config_path))
         reporter.generate_csv_report(aggregate, config.system_type)
 
-        return group_summary_row(system, aggregate, detector, learned_path)
+        return group_summary_row(system, aggregate, detector, resolved_learned_path)
