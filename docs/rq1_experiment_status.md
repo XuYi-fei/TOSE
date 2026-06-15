@@ -57,6 +57,8 @@ subject system 为：
 - 端到端重跑入口：
   - [run_rq1_holdout_pipeline.py](/Users/xuyifei/NJU/repos/TOSE/scripts/run_rq1_holdout_pipeline.py)
 
+旧版 RQ1 脚本与测试已经从源码中删除；当前仓库只保留上述最新 holdout 版本。
+
 正式目录约定：
 
 - holdout 数据：`data_rq1_holdout/`
