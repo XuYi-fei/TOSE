@@ -91,7 +91,7 @@ class RQ1HoldoutRunner:
 
     def __init__(
         self,
-        data_root: str | Path = "data_rq1_lodo",
+        data_root: str | Path = "data_rq1_holdout",
         methods: list[str] | None = None,
         systems: list[str] | None = None,
         output_dir: str | Path = "rq_results/rq1",

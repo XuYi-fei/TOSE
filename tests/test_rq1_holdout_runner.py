@@ -65,7 +65,7 @@ class RQ1HoldoutRunnerTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            data_root = root / "data_rq1_lodo" / "rubis"
+            data_root = root / "data_rq1_holdout" / "rubis"
             for holdout_name in ("holdout_norm1", "holdout_norm2"):
                 holdout_dir = data_root / holdout_name
                 (holdout_dir / "identity").mkdir(parents=True)
@@ -129,7 +129,7 @@ class RQ1HoldoutRunnerTests(unittest.TestCase):
             ]
 
             runner = RQ1HoldoutRunner(
-                data_root=root / "data_rq1_lodo",
+                data_root=root / "data_rq1_holdout",
                 output_dir=root / "rq_results",
                 learned_root=root / "clustering_results_rq1_holdout",
                 systems=["rubis"],
@@ -159,7 +159,7 @@ class RQ1HoldoutRunnerTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            holdout_dir = root / "data_rq1_lodo" / "rubis" / "holdout_norm1"
+            holdout_dir = root / "data_rq1_holdout" / "rubis" / "holdout_norm1"
             (holdout_dir / "identity").mkdir(parents=True)
             (holdout_dir / "abnormal").mkdir(parents=True)
             learned_path = (
@@ -173,7 +173,7 @@ class RQ1HoldoutRunnerTests(unittest.TestCase):
             learned_path.write_text("metadata: {}\ndistributions: {}\n", encoding="utf-8")
 
             runner = RQ1HoldoutRunner(
-                data_root=root / "data_rq1_lodo",
+                data_root=root / "data_rq1_holdout",
                 output_dir=root / "rq_results",
                 learned_root=root / "clustering_results_rq1_holdout",
                 systems=["rubis"],

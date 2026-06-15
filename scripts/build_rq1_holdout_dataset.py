@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate leave-one-distribution-out RQ1 datasets."""
+"""Generate standardized holdout RQ1 datasets."""
 
 from __future__ import annotations
 
@@ -11,20 +11,20 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from rq_methods.lodo_dataset import generate_lodo_dataset_root
+from rq_methods.holdout_dataset import generate_holdout_dataset_root
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-root", default="data", type=Path)
-    parser.add_argument("--output-root", default="data_rq1_lodo", type=Path)
+    parser.add_argument("--output-root", default="data_rq1_holdout", type=Path)
     parser.add_argument("--systems", nargs="+", default=["rubis", "bsn", "swat", "wadi"])
     parser.add_argument("--identity-traces", type=int, default=200)
     parser.add_argument("--abnormal-traces", type=int, default=200)
     parser.add_argument("--boundary-trim-points", type=int, default=10)
     args = parser.parse_args()
 
-    layouts = generate_lodo_dataset_root(
+    layouts = generate_holdout_dataset_root(
         data_root=args.data_root,
         output_root=args.output_root,
         systems=args.systems,

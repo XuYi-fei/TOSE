@@ -4,7 +4,7 @@ import tempfile
 import unittest
 import pandas as pd
 
-from rq_methods.lodo_dataset import (
+from rq_methods.holdout_dataset import (
     DistributionSegment,
     build_experiment_layout,
     build_holdout_unit_id,
@@ -34,7 +34,7 @@ def _write_rubis_trace(path: Path, values_by_segment: list[tuple[str, int, list[
     path.joinpath(filename).write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-class RQ1LodoDatasetTests(unittest.TestCase):
+class RQ1HoldoutDatasetTests(unittest.TestCase):
     def test_build_holdout_unit_id_uses_sensor_for_bsn(self) -> None:
         self.assertEqual(build_holdout_unit_id("rubis", "norm1", None), "norm1")
         self.assertEqual(build_holdout_unit_id("bsn", "norm2", 5), "sensor5_norm2")

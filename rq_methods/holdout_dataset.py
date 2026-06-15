@@ -1,4 +1,4 @@
-"""Build leave-one-distribution-out RQ1 datasets from identity traces."""
+"""Build holdout-based RQ1 datasets from identity traces."""
 
 from __future__ import annotations
 
@@ -528,7 +528,7 @@ def generate_holdout_dataset(
     return output_dir
 
 
-def generate_lodo_dataset_root(
+def generate_holdout_dataset_root(
     data_root: Path,
     output_root: Path,
     systems: Iterable[str],

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run clustering for every RQ1 LODO holdout dataset."""
+"""Run clustering for every standardized RQ1 holdout dataset."""
 
 from __future__ import annotations
 
@@ -40,10 +40,10 @@ def main() -> int:
     import os
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--data-root", default="data_rq1_lodo", type=Path)
-    parser.add_argument("--output-root", default="clustering_results_rq1_lodo", type=Path)
+    parser.add_argument("--data-root", default="data_rq1_holdout", type=Path)
+    parser.add_argument("--output-root", default="clustering_results_rq1_holdout", type=Path)
     parser.add_argument("--systems", nargs="+", default=["rubis", "bsn", "swat", "wadi"])
-    parser.add_argument("--temp-config-root", default="tmp-test/rq1_lodo_configs", type=Path)
+    parser.add_argument("--temp-config-root", default="tmp-test/rq1_holdout_configs", type=Path)
     args = parser.parse_args()
     os.environ.setdefault("MPLBACKEND", "Agg")
     os.environ.setdefault("MPLCONFIGDIR", str((Path("tmp-test") / "mplconfig").resolve()))

@@ -18,7 +18,7 @@ def _run(cmd: list[str], cwd: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-root", default="data", type=Path)
-    parser.add_argument("--lodo-root", default="data_rq1_lodo", type=Path)
+    parser.add_argument("--holdout-root", default="data_rq1_holdout", type=Path)
     parser.add_argument("--learned-root", default="clustering_results_rq1_holdout", type=Path)
     parser.add_argument("--output-dir", default="rq_results/rq1", type=Path)
     parser.add_argument("--systems", nargs="+", default=["rubis", "bsn", "swat", "wadi"])
@@ -30,11 +30,11 @@ def main() -> int:
     _run(
         [
             python,
-            "scripts/build_rq1_lodo_dataset.py",
+            "scripts/build_rq1_holdout_dataset.py",
             "--data-root",
             str(args.data_root),
             "--output-root",
-            str(args.lodo_root),
+            str(args.holdout_root),
             "--systems",
             *args.systems,
         ],
@@ -43,9 +43,9 @@ def main() -> int:
     _run(
         [
             python,
-            "scripts/build_rq1_lodo_group_distributions.py",
+            "scripts/build_rq1_holdout_group_distributions.py",
             "--data-root",
-            str(args.lodo_root),
+            str(args.holdout_root),
             "--output-root",
             str(args.learned_root),
             "--systems",
@@ -58,7 +58,7 @@ def main() -> int:
             python,
             "scripts/run_rq1_methods_matrix.py",
             "--data-root",
-            str(args.lodo_root),
+            str(args.holdout_root),
             "--output-dir",
             str(args.output_dir),
             "--learned-root",

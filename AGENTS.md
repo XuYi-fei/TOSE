@@ -38,8 +38,8 @@ RQ1 五方法统一对比脚本：
 - `@/scripts/run_rq1_methods_matrix.py`
 
 RQ1 五方法统一结果：
-- `@/rq_results/rq1/summary/rq1_methods_summary.csv`
-- `@/rq_results/rq1/summary/rq1_methods_summary.json`
+- `@/rq_results/rq1/summary/rq1_holdout_system_summary.csv`
+- `@/rq_results/rq1/summary/rq1_holdout_system_summary.json`
 
 Git 提交规范：
 - 每次修改代码后都要运行聚焦验证，更新必要的进度文档，然后提交 git。

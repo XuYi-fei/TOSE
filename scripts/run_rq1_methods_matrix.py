@@ -30,7 +30,7 @@ def main() -> int:
         choices=RQ1_METHODS,
         help="RQ1 methods to evaluate.",
     )
-    parser.add_argument("--data-root", default="data_rq1_lodo", type=Path)
+    parser.add_argument("--data-root", default="data_rq1_holdout", type=Path)
     parser.add_argument("--output-dir", default="rq_results/rq1", type=Path)
     parser.add_argument("--learned-root", default="clustering_results_rq1_holdout", type=Path)
     parser.add_argument("--baseline-identity-root", default="data", type=Path)
