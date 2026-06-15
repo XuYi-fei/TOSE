@@ -1,5 +1,5 @@
 """Unified RQ method adapters."""
 
-from .runner import RQ1MethodsRunner
+from .holdout_runner import RQ1HoldoutRunner
 
-__all__ = ["RQ1MethodsRunner"]
+__all__ = ["RQ1HoldoutRunner"]

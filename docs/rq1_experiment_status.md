@@ -24,38 +24,45 @@ RQ1 当前目标是评估：
 
 最终目标是形成 `4 x 4 = 16` 组辨识-检测结果矩阵。
 
-## LODO Reconstruction
+## Holdout Reconstruction
 
-2026-06-13 新增了一套独立于旧 `data/<system>` 的 RQ1 LODO 评估链路，用于把“异常段完全来自训练时被留出的分布单元”这一定义固定下来。
+2026-06-15 起，RQ1 只保留一套唯一的 holdout 评估协议。旧的两套 RQ1 runner 已废弃，不再作为正式结果来源。
 
-LODO 的核心约束：
+当前唯一有效的 RQ1 协议：
 
 - 测试数据完全由已有 `identity` 段重新拼接生成。
 - abnormal trace 的异常段始终位于最后一段，评估口径仍使用文件名中的 `abn1_start_time`。
 - `rubis`、`swat`、`wadi` 的 holdout 单元是 identity 文件名中的 `norm1/norm2/norm3`。
 - `bsn` 的 holdout 单元是 `sensor_index + norm_label`，例如 `sensor3_norm2`。
 - 对某个 holdout 单元 `u`：
-  - 训练 identity 只使用 `D - {u}`
-  - abnormal 前缀只使用 `D - {u}`
-  - abnormal 最后一段只使用 `{u}`
+  - holdout abnormal 数据的最后一段只使用 `{u}`
+  - abnormal 前缀由非 `{u}` 的 identity 分布段自由拼接
+- `GROUP`：
+  - 对每个 holdout 单元单独训练
+  - 训练 identity 使用该 holdout 目录下的 `identity`
+  - 测试只测该 holdout 目录下的 `abnormal`
+- `SWD`、`ARD`、`PRD`、`GPD`：
+  - 每个 system 只训练一次
+  - 统一使用 `data/<system>/identity` 训练
+  - 对该 system 下所有 holdout abnormal 逐组测试并聚合
 
 对应标准化脚本：
 
 - [build_rq1_lodo_dataset.py](/Users/xuyifei/NJU/repos/TOSE/scripts/build_rq1_lodo_dataset.py)
 - [build_rq1_lodo_group_distributions.py](/Users/xuyifei/NJU/repos/TOSE/scripts/build_rq1_lodo_group_distributions.py)
-- [run_rq1_lodo_methods_matrix.py](/Users/xuyifei/NJU/repos/TOSE/scripts/run_rq1_lodo_methods_matrix.py)
+- [run_rq1_methods_matrix.py](/Users/xuyifei/NJU/repos/TOSE/scripts/run_rq1_methods_matrix.py)
 - [run_rq1_lodo_pipeline.py](/Users/xuyifei/NJU/repos/TOSE/scripts/run_rq1_lodo_pipeline.py)
 
 相关实现：
 
 - [rq_methods/lodo_dataset.py](/Users/xuyifei/NJU/repos/TOSE/rq_methods/lodo_dataset.py)
-- [rq_methods/lodo_runner.py](/Users/xuyifei/NJU/repos/TOSE/rq_methods/lodo_runner.py)
+- [rq_methods/holdout_runner.py](/Users/xuyifei/NJU/repos/TOSE/rq_methods/holdout_runner.py)
 
-LODO 数据与结果目录：
+holdout 数据与结果目录：
 
 - `data_rq1_lodo/`
-- `clustering_results_rq1_lodo/`
-- `rq_results/rq1_lodo/`
+- `clustering_results_rq1_holdout/`
+- `rq_results/rq1/`
 
 本轮 holdout 数量：
 
@@ -63,6 +70,72 @@ LODO 数据与结果目录：
 - `bsn`: 18
 - `swat`: 3
 - `wadi`: 3
+
+## Official RQ1 Protocol
+
+2026-06-15 起，RQ1 只承认这一套协议的结果：
+
+- holdout 数据统一来自 `data_rq1_lodo/`
+- `GROUP` 对每个 `holdout_*` 单独训练，再测试该 holdout 的 abnormal 数据
+- `SWD`、`ARD`、`PRD`、`GPD` 对每个 system 只训练一次，训练集固定为 `data/<system>/identity`
+- baseline 训练完成后，对该 system 下全部 holdout abnormal 数据逐组测试并聚合
+
+旧的两套结果现在都只保留作历史调试痕迹，不再作为论文或实验结论来源：
+
+- 旧的“直接基于 `data/<system>/abnormal` 的统一五方法矩阵”
+- 旧的“baseline 也跟着每个 holdout 重训”的 LODO 五方法矩阵
+
+当前唯一正式入口：
+
+```bash
+python3 scripts/run_rq1_methods_matrix.py \
+  --data-root data_rq1_lodo \
+  --output-dir rq_results/rq1 \
+  --learned-root clustering_results_rq1_holdout \
+  --baseline-identity-root data
+```
+
+当前唯一正式汇总文件：
+
+- [rq1_holdout_per_holdout_summary.csv](/Users/xuyifei/NJU/repos/TOSE/rq_results/rq1/summary/rq1_holdout_per_holdout_summary.csv)
+- [rq1_holdout_per_holdout_summary.json](/Users/xuyifei/NJU/repos/TOSE/rq_results/rq1/summary/rq1_holdout_per_holdout_summary.json)
+- [rq1_holdout_system_summary.csv](/Users/xuyifei/NJU/repos/TOSE/rq_results/rq1/summary/rq1_holdout_system_summary.csv)
+- [rq1_holdout_system_summary.json](/Users/xuyifei/NJU/repos/TOSE/rq_results/rq1/summary/rq1_holdout_system_summary.json)
+
+## Current Official Results
+
+本轮按新协议重跑后的 system-level 汇总如下：
+
+| system | method | FN | FP | MTD | F1 |
+|---|---:|---:|---:|---:|---:|
+| rubis | GROUP | 0.00 | 10.83 | 3.46 | 0.9419 |
+| rubis | ARD | 0.17 | 88.33 | 8.51 | 0.2047 |
+| rubis | SWD | 100.00 | 0.00 | 0.00 | 0.0000 |
+| rubis | PRD | 100.00 | 0.00 | 0.00 | 0.0000 |
+| rubis | GPD | 94.17 | 5.83 | 0.00 | 0.0000 |
+| bsn | GROUP | 0.00 | 2.97 | 4.11 | 0.9847 |
+| bsn | ARD | 0.00 | 100.00 | 0.00 | 0.0000 |
+| bsn | SWD | 99.67 | 0.33 | 0.00 | 0.0000 |
+| bsn | PRD | 0.00 | 100.00 | 0.00 | 0.0000 |
+| bsn | GPD | 100.00 | 0.00 | 0.00 | 0.0000 |
+| swat | GROUP | 0.00 | 4.17 | 3.53 | 0.9787 |
+| swat | ARD | 0.00 | 74.50 | 1.00 | 0.3830 |
+| swat | SWD | 98.33 | 1.67 | 0.00 | 0.0000 |
+| swat | PRD | 100.00 | 0.00 | 0.00 | 0.0000 |
+| swat | GPD | 86.17 | 9.33 | 144.62 | 0.0835 |
+| wadi | GROUP | 0.83 | 0.00 | 8.79 | 0.9958 |
+| wadi | ARD | 0.00 | 99.33 | 0.67 | 0.0132 |
+| wadi | SWD | 100.00 | 0.00 | 0.00 | 0.0000 |
+| wadi | PRD | 100.00 | 0.00 | 0.00 | 0.0000 |
+| wadi | GPD | 89.67 | 8.50 | 74.00 | 0.0355 |
+
+当前结论：
+
+- `GROUP` 是四个 system 上唯一整体稳定的方法。
+- `bsn` 在按 `sensor` 分区后，`GROUP` 的 `FP` 已稳定下降到 `2.97%`，不再是主失败案例。
+- `wadi` 上 `GROUP` 当前最佳，`FP=0`，`FN=0.83`。
+- `rubis` 和 `swat` 上 `GROUP` 也显著优于其余方法。
+- 这套新协议下，`SWD/PRD/GPD` 大多表现为高 `FN`，`ARD` 大多表现为高 `FP`。
 
 ## Current Scope
 
@@ -87,7 +160,8 @@ LODO 数据与结果目录：
 9. 已新增论文 RQ1 五方法统一 runner：
    - [scripts/run_rq1_methods_matrix.py](/Users/xuyifei/NJU/repos/TOSE/scripts/run_rq1_methods_matrix.py)
    - 方法维度统一为 `SWD`、`ARD`、`PRD`、`GPD`、`GROUP`
-   - 其中 `GROUP` 不再展开四个聚类算法，而是读取 `clustering_results/<system>/learned_distributions.yaml`，即聚类阶段选出的最佳算法结果。
+   - 其中 `GROUP` 对每个 holdout 单元读取 `clustering_results_rq1_holdout/<system>/holdout_*/learned_distributions.yaml`
+   - baseline 方法不再按 holdout 重训，而是每个 system 只训练一次
 
 ## Standard Pipeline
 

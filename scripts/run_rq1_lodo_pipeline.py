@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End-to-end RQ1 LODO pipeline: dataset -> group clustering -> methods matrix."""
+"""End-to-end RQ1 holdout pipeline: dataset -> GROUP holdout training -> unified methods matrix."""
 
 from __future__ import annotations
 
@@ -19,8 +19,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-root", default="data", type=Path)
     parser.add_argument("--lodo-root", default="data_rq1_lodo", type=Path)
-    parser.add_argument("--learned-root", default="clustering_results_rq1_lodo", type=Path)
-    parser.add_argument("--output-dir", default="rq_results/rq1_lodo", type=Path)
+    parser.add_argument("--learned-root", default="clustering_results_rq1_holdout", type=Path)
+    parser.add_argument("--output-dir", default="rq_results/rq1", type=Path)
     parser.add_argument("--systems", nargs="+", default=["rubis", "bsn", "swat", "wadi"])
     args = parser.parse_args()
 
@@ -56,13 +56,15 @@ def main() -> int:
     _run(
         [
             python,
-            "scripts/run_rq1_lodo_methods_matrix.py",
+            "scripts/run_rq1_methods_matrix.py",
             "--data-root",
             str(args.lodo_root),
             "--output-dir",
             str(args.output_dir),
             "--learned-root",
             str(args.learned_root),
+            "--baseline-identity-root",
+            str(args.data_root),
             "--systems",
             *args.systems,
         ],

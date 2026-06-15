@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run unified RQ1 methods: SWD, ARD, PRD, GPD, and GROUP."""
+"""Run the single standardized holdout-based RQ1 protocol."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from rq_methods.runner import RQ1_METHODS, SYSTEMS, RQ1MethodsRunner
+from rq_methods.holdout_runner import RQ1_METHODS, SYSTEMS, RQ1HoldoutRunner
 
 
 def main() -> int:
@@ -30,32 +30,28 @@ def main() -> int:
         choices=RQ1_METHODS,
         help="RQ1 methods to evaluate.",
     )
-    parser.add_argument("--data-root", default="data", type=Path)
+    parser.add_argument("--data-root", default="data_rq1_lodo", type=Path)
     parser.add_argument("--output-dir", default="rq_results/rq1", type=Path)
-    parser.add_argument("--learned-root", default="clustering_results", type=Path)
-    parser.add_argument(
-        "--detection-mode",
-        choices=["pointwise", "bocpd"],
-        help="Override GROUP detection mode from the standard detection config.",
-    )
+    parser.add_argument("--learned-root", default="clustering_results_rq1_holdout", type=Path)
+    parser.add_argument("--baseline-identity-root", default="data", type=Path)
     args = parser.parse_args()
 
-    runner = RQ1MethodsRunner(
+    runner = RQ1HoldoutRunner(
         systems=args.systems,
         methods=args.methods,
         data_root=args.data_root,
         output_dir=args.output_dir,
         learned_root=args.learned_root,
-        detection_mode_override=args.detection_mode,
+        baseline_identity_root=args.baseline_identity_root,
     )
-    rows = runner.run()
+    _, rows = runner.run()
     for row in rows:
         print(
             f"{row['system']},{row['method']}: "
             f"FN={row['FN']:.2f}%, FP={row['FP']:.2f}%, "
-            f"MTD={row['MTD']:.2f}, AR={row['AR']:.2f}%"
+            f"MTD={row['MTD']:.2f}, holdouts={row['holdout_count']}"
         )
-    print(f"summary: {args.output_dir / 'summary' / 'rq1_methods_summary.csv'}")
+    print(f"summary: {args.output_dir / 'summary' / 'rq1_holdout_system_summary.csv'}")
     return 0
 
 

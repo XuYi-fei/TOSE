@@ -1,4 +1,4 @@
-"""Run RQ1 methods over leave-one-distribution-out datasets."""
+"""Unified RQ1 runner for holdout-based evaluation."""
 
 from __future__ import annotations
 
@@ -8,13 +8,16 @@ import json
 from pathlib import Path
 from typing import Any
 
-from baseline_methods.config import METHODS as BASELINE_METHODS
-from baseline_methods.evaluator import BaselineExperimentRunner
+from baseline_methods.evaluator import BaselineEvaluator, aggregate_results
+from baseline_methods.identifier import BaselineIdentifier
 
 from .group_adapter import GroupMethodRunner
 
 
 RQ1_METHODS = ["SWD", "ARD", "PRD", "GPD", "GROUP"]
+SYSTEMS = ["rubis", "bsn", "swat", "wadi"]
+BASELINE_METHODS = ["SWD", "ARD", "PRD", "GPD"]
+
 SUMMARY_FIELDS = [
     "system",
     "method",
@@ -35,7 +38,7 @@ SUMMARY_FIELDS = [
 ]
 
 
-def build_lodo_system_paths(data_root: Path, system: str, holdout_dir_name: str) -> dict[str, Path]:
+def build_holdout_paths(data_root: Path, system: str, holdout_dir_name: str) -> dict[str, Path]:
     base_dir = data_root / system / holdout_dir_name
     return {
         "identity": base_dir / "identity",
@@ -74,59 +77,98 @@ def aggregate_holdout_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return summary_rows
 
 
-class RQ1LodoRunner:
-    """Run baseline and GROUP methods for every holdout-unit dataset."""
+class RQ1HoldoutRunner:
+    """Run the single standardized RQ1 protocol.
+
+    GROUP:
+    - train per holdout
+    - test on that holdout's abnormal set
+
+    Baselines:
+    - train once per system on data/<system>/identity
+    - test across every holdout abnormal set
+    """
 
     def __init__(
         self,
         data_root: str | Path = "data_rq1_lodo",
         methods: list[str] | None = None,
         systems: list[str] | None = None,
-        output_dir: str | Path = "rq_results/rq1_lodo",
-        learned_root: str | Path = "clustering_results_rq1_lodo",
+        output_dir: str | Path = "rq_results/rq1",
+        learned_root: str | Path = "clustering_results_rq1_holdout",
+        baseline_identity_root: str | Path = "data",
     ):
         self.data_root = Path(data_root)
         self.methods = [method.upper() for method in (methods or RQ1_METHODS)]
-        self.systems = systems or ["rubis", "bsn", "swat", "wadi"]
+        self.systems = list(systems or SYSTEMS)
         self.output_dir = Path(output_dir)
         self.learned_root = Path(learned_root)
+        self.baseline_identity_root = Path(baseline_identity_root)
 
     def _iter_holdout_dirs(self, system: str) -> list[Path]:
         system_dir = self.data_root / system
         return sorted(path for path in system_dir.glob("holdout_*") if path.is_dir())
 
+    def _run_baselines_for_system(self, system: str, holdout_dirs: list[Path]) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        baseline_methods = [method for method in self.methods if method in BASELINE_METHODS]
+        if not baseline_methods:
+            return rows
+
+        identifier = BaselineIdentifier(system)
+        trained_configs = {
+            method: identifier.identify(method, self.baseline_identity_root / system / "identity")
+            for method in baseline_methods
+        }
+
+        for method, baseline_config in trained_configs.items():
+            method_output_dir = self.output_dir / "baseline_methods" / system
+            baseline_config.write_json(method_output_dir / f"{method}.json")
+            evaluator = BaselineEvaluator(system, baseline_config)
+
+            for holdout_dir in holdout_dirs:
+                holdout_name = holdout_dir.name
+                abnormal_dir = holdout_dir / "abnormal"
+                trace_results = evaluator.evaluate_directory(abnormal_dir)
+                holdout_output_path = method_output_dir / holdout_name / f"detection_results_{method}.json"
+                holdout_output_path.parent.mkdir(parents=True, exist_ok=True)
+                holdout_output_path.write_text(
+                    json.dumps([result.__dict__ for result in trace_results], indent=2, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+                row = aggregate_results(system, method, trace_results)
+                rows.append({**row, "holdout_unit": holdout_name.removeprefix("holdout_")})
+
+        return rows
+
+    def _run_group_for_system(self, system: str, holdout_dirs: list[Path]) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        if "GROUP" not in self.methods:
+            return rows
+
+        group_runner = GroupMethodRunner(
+            output_dir=self.output_dir,
+            learned_root=self.learned_root,
+        )
+        for holdout_dir in holdout_dirs:
+            holdout_name = holdout_dir.name
+            paths = build_holdout_paths(self.data_root, system, holdout_name)
+            row = group_runner.run_system_with_overrides(
+                system,
+                learned_path=self.learned_root / system / holdout_name / "learned_distributions.yaml",
+                test_data_path=paths["abnormal"],
+                output_dir=self.output_dir / system / holdout_name,
+            )
+            rows.append({**row, "holdout_unit": holdout_name.removeprefix("holdout_")})
+        return rows
+
     def run(self) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         per_holdout_rows: list[dict[str, Any]] = []
-        baseline_methods = [method for method in self.methods if method in BASELINE_METHODS]
-        include_group = "GROUP" in self.methods
 
         for system in self.systems:
             holdout_dirs = self._iter_holdout_dirs(system)
-            for holdout_dir in holdout_dirs:
-                holdout_name = holdout_dir.name
-                paths = build_lodo_system_paths(self.data_root, system, holdout_name)
-                if baseline_methods:
-                    baseline_runner = BaselineExperimentRunner(
-                        systems={system: paths},
-                        output_dir=self.output_dir / "baseline_methods" / system / holdout_name,
-                        methods=baseline_methods,
-                    )
-                    for row in baseline_runner.run():
-                        per_holdout_rows.append({**row, "holdout_unit": holdout_name.removeprefix("holdout_")})
-
-                if include_group:
-                    group_runner = GroupMethodRunner(
-                        config_map={system: _build_lodo_config_path(system)},
-                        output_dir=self.output_dir / system / holdout_name,
-                        learned_root=self.learned_root,
-                    )
-                    row = group_runner.run_system_with_overrides(
-                        system,
-                        learned_path=self.learned_root / system / holdout_name / "learned_distributions.yaml",
-                        test_data_path=paths["abnormal"],
-                        output_dir=self.output_dir / system / holdout_name,
-                    )
-                    per_holdout_rows.append({**row, "holdout_unit": holdout_name.removeprefix("holdout_")})
+            per_holdout_rows.extend(self._run_baselines_for_system(system, holdout_dirs))
+            per_holdout_rows.extend(self._run_group_for_system(system, holdout_dirs))
 
         summary_rows = aggregate_holdout_rows(per_holdout_rows)
         self._write_reports(per_holdout_rows, summary_rows)
@@ -135,10 +177,10 @@ class RQ1LodoRunner:
     def _write_reports(self, per_holdout_rows: list[dict[str, Any]], summary_rows: list[dict[str, Any]]) -> None:
         summary_dir = self.output_dir / "summary"
         summary_dir.mkdir(parents=True, exist_ok=True)
-        holdout_csv = summary_dir / "rq1_lodo_per_holdout_summary.csv"
-        holdout_json = summary_dir / "rq1_lodo_per_holdout_summary.json"
-        system_csv = summary_dir / "rq1_lodo_system_summary.csv"
-        system_json = summary_dir / "rq1_lodo_system_summary.json"
+        holdout_csv = summary_dir / "rq1_holdout_per_holdout_summary.csv"
+        holdout_json = summary_dir / "rq1_holdout_per_holdout_summary.json"
+        system_csv = summary_dir / "rq1_holdout_system_summary.csv"
+        system_json = summary_dir / "rq1_holdout_system_summary.json"
 
         holdout_fields = sorted({key for row in per_holdout_rows for key in row.keys()})
         with holdout_csv.open("w", newline="", encoding="utf-8") as handle:
@@ -166,12 +208,3 @@ class RQ1LodoRunner:
             ),
             encoding="utf-8",
         )
-
-
-def _build_lodo_config_path(system: str) -> str:
-    return {
-        "rubis": "configs/rubis_detection_config.yaml",
-        "bsn": "configs/bsn_detection_config.yaml",
-        "swat": "configs/swat_detection_config.yaml",
-        "wadi": "configs/wadi_generic_detection_config.yaml",
-    }[system]
