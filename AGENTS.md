@@ -41,6 +41,18 @@ RQ1 五方法统一结果：
 - `@/rq_results/rq1/summary/rq1_holdout_system_summary.csv`
 - `@/rq_results/rq1/summary/rq1_holdout_system_summary.json`
 
+RQ2 当前目标：
+- 在 `rubis`、`bsn`、`swat`、`wadi` 四个 subject system 上，对 `GROUP`、`PRO`、`GPD` 三种方法做统一 holdout 方式的辨识与异常检测对比。
+- 三种方法都必须按同一个 `holdout_*` 单元分别训练，并只在该 holdout 的 `abnormal` 数据上检测。
+- `PRO` 复用 ASE `PRD` 的识别/检测实现，但在 RQ2 输出中统一命名为 `PRO`。
+
+RQ2 统一重跑脚本：
+- `@/scripts/run_rq2_methods_matrix.py`
+
+RQ2 统一结果：
+- `@/rq_results/rq2/summary/rq2_holdout_system_summary.csv`
+- `@/rq_results/rq2/summary/rq2_holdout_system_summary.json`
+
 Git 提交规范：
 - 每次修改代码后都要运行聚焦验证，更新必要的进度文档，然后提交 git。
 - 每次提交必须使用完整的多行 commit message：首行使用 Conventional Commits 风格，正文写清楚本次提交改了什么、为什么改、验证了什么。

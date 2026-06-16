@@ -130,23 +130,41 @@ python validate.py --config configs/rubis_config.yaml
 python validate.py --config configs/bsn_config.yaml
 ```
 
-#### 4. RQ2 baseline（原始数值 kmeans 聚类检测）
+#### 4. RQ2 holdout 三方法对比
 
-用于论文 RQ2 的对比实验。该链路不使用当前的 `[mean, variance]` 分布聚类，而是直接对全部 `identity` 原始数值点做 1D kmeans 聚类，并对 `k=2..10` 分别检测。
+当前正式 RQ2 口径对比三种方法：
+
+- `GROUP`
+- `PRO`
+- `GPD`
+
+其中：
+
+- `GROUP` 使用当前 TOSE 主链路。
+- `PRO` 复用 ASE `PRD` 的辨识/检测实现，但在 RQ2 输出中统一命名为 `PRO`。
+- `GPD` 复用 ASE `GPD` 的辨识/检测实现。
+
+三种方法都与 `GROUP` 保持同一套 holdout 评估协议：
+
+- 对每个 `holdout_*` 单元分别训练。
+- 训练集使用该 holdout 目录下的 `identity`。
+- 检测集只使用该 holdout 目录下的 `abnormal`。
 
 ```bash
-# 1. 训练 k=2..10 的 baseline 模型
-python cluster_kmeans_baseline.py --config configs/rubis_kmeans_baseline_cluster_config.yaml
-
-# 2. 用每个 k 的模型分别做检测并输出 best-k 汇总
-python detect_kmeans_baseline.py --config configs/rubis_kmeans_baseline_detect_config.yaml
+python scripts/run_rq2_methods_matrix.py \
+  --data-root data_rq1_holdout \
+  --learned-root clustering_results_rq1_holdout \
+  --output-dir rq_results/rq2
 ```
 
 **输出文件**:
-- `clustering_results/{system}/rq2_kmeans_baseline/baseline_model_k<k>.yaml`
-- `detection_results/{system}/rq2_kmeans_baseline/detection_results_k<k>.json`
-- `detection_results/{system}/rq2_kmeans_baseline/detection_report_k<k>.md`
-- `detection_results/{system}/rq2_kmeans_baseline/rq2_kmeans_summary.{json,csv,md}`
+- `rq_results/rq2/summary/rq2_holdout_per_holdout_summary.csv`
+- `rq_results/rq2/summary/rq2_holdout_per_holdout_summary.json`
+- `rq_results/rq2/summary/rq2_holdout_system_summary.csv`
+- `rq_results/rq2/summary/rq2_holdout_system_summary.json`
+- `rq_results/rq2/baseline_methods/<system>/holdout_*/PRO.json`
+- `rq_results/rq2/baseline_methods/<system>/holdout_*/GPD.json`
+- `rq_results/rq2/<system>/holdout_*/<system>/GROUP/detection_results_GROUP.json`
 
 ---
 
