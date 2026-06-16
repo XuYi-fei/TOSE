@@ -103,6 +103,10 @@ python3 scripts/run_rq1_holdout_pipeline.py \
 - [rq1_holdout_system_summary.csv](/Users/xuyifei/NJU/repos/TOSE/rq_results/rq1/summary/rq1_holdout_system_summary.csv)
 - [rq1_holdout_system_summary.json](/Users/xuyifei/NJU/repos/TOSE/rq_results/rq1/summary/rq1_holdout_system_summary.json)
 
+说明：
+
+- 当前 `RQ1` summary 也会一并导出派生列 `utility = 100 - AR`，便于和 `RQ3` 对齐回看，但 `RQ1` 的核心评价仍以 `FN/FP/MTD/F1` 为主。
+
 `GROUP` 的 holdout 训练结果输出在：
 
 - `rq_results/rq1/<system>/holdout_*/`

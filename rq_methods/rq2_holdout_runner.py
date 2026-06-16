@@ -13,6 +13,7 @@ from baseline_methods.identifier import BaselineIdentifier
 
 from .group_adapter import GroupMethodRunner
 from .holdout_runner import SYSTEMS, SUMMARY_FIELDS, aggregate_holdout_rows, build_holdout_paths
+from .metrics import enrich_summary_row
 
 
 RQ2_METHODS = ["GROUP", "PRO", "GPD"]
@@ -68,7 +69,7 @@ class RQ2HoldoutRunner:
                 test_data_path=paths["abnormal"],
                 output_dir=self.output_dir / system / holdout_name,
             )
-            rows.append({**row, "holdout_unit": holdout_name.removeprefix("holdout_")})
+            rows.append(enrich_summary_row({**row, "holdout_unit": holdout_name.removeprefix("holdout_")}))
         return rows
 
     def _run_holdout_baselines_for_system(self, system: str, holdout_dirs: list[Path]) -> list[dict[str, Any]]:
@@ -97,7 +98,7 @@ class RQ2HoldoutRunner:
                     encoding="utf-8",
                 )
                 row = aggregate_results(system, rq2_method, trace_results)
-                rows.append({**row, "holdout_unit": holdout_name.removeprefix("holdout_")})
+                rows.append(enrich_summary_row({**row, "holdout_unit": holdout_name.removeprefix("holdout_")}))
 
         return rows
 

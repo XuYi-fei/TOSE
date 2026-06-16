@@ -166,6 +166,32 @@ python scripts/run_rq2_methods_matrix.py \
 - `rq_results/rq2/baseline_methods/<system>/holdout_*/GPD.json`
 - `rq_results/rq2/<system>/holdout_*/<system>/GROUP/detection_results_GROUP.json`
 
+#### 5. RQ3 实用性汇总
+
+RQ3 不重新定义训练和检测，而是直接复用正式 RQ1 协议，对五种方法汇总：
+
+- `异常率`
+- `utility`
+
+当前口径：
+
+- `异常率` 直接复用 ASE 风格 `AR`
+- `utility = 100 - AR`
+
+```bash
+python3 scripts/run_rq3_methods_matrix.py \
+  --data-root data_rq1_holdout \
+  --learned-root clustering_results_rq1_holdout \
+  --output-dir rq_results/rq3 \
+  --baseline-identity-root data
+```
+
+**输出文件**:
+- `rq_results/rq3/summary/rq3_per_holdout_summary.csv`
+- `rq_results/rq3/summary/rq3_per_holdout_summary.json`
+- `rq_results/rq3/summary/rq3_system_summary.csv`
+- `rq_results/rq3/summary/rq3_system_summary.json`
+
 ---
 
 ## ⚙️ 配置说明

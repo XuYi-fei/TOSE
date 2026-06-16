@@ -9,6 +9,7 @@ from anomaly_detection.config.config import DetectionConfig
 from anomaly_detection.core.detector import AnomalyDetector, BOCPDDetector
 from anomaly_detection.core.evaluator import AggregatedMetrics, AnomalyEvaluator
 from anomaly_detection.visualization.reporter import DetectionReporter
+from .metrics import enrich_summary_row
 
 
 SYSTEM_CONFIG_MAP = {
@@ -52,7 +53,7 @@ def group_summary_row(
 ) -> dict[str, Any]:
     total = aggregate.total_traces or 1
     avg_delay = aggregate.avg_delay_loops if aggregate.avg_delay_loops is not None else 0.0
-    return {
+    return enrich_summary_row({
         "system": system,
         "method": "GROUP",
         "total_traces": aggregate.total_traces,
@@ -67,7 +68,11 @@ def group_summary_row(
         "FP": aggregate.fp_count / total * 100.0,
         "MTD": avg_delay,
         "MLD": avg_delay,
-        "AR": 0.0,
+        "AR": (
+            aggregate.abnormal_time / aggregate.abnormal_total_time * 100.0
+            if aggregate.abnormal_total_time
+            else 0.0
+        ),
         "precision": aggregate.precision,
         "recall": aggregate.recall,
         "f1_score": aggregate.f1_score,
@@ -75,7 +80,7 @@ def group_summary_row(
         "clustering_algorithm": detector.clustering_algorithm or "",
         "detection_mode": getattr(detector, "detection_mode", "pointwise"),
         "learned_distributions": str(learned_path),
-    }
+    })
 
 
 class GroupMethodRunner:

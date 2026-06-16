@@ -274,6 +274,8 @@ class RQ1HoldoutRunnerTests(unittest.TestCase):
                 avg_delay_loops=2.0,
                 min_delay_loops=2,
                 max_delay_loops=2,
+                abnormal_time=12.0,
+                abnormal_total_time=120.0,
                 trace_metrics=[],
             )
 
@@ -295,6 +297,8 @@ class RQ1HoldoutRunnerTests(unittest.TestCase):
             self.assertEqual(Path(from_yaml.call_args.args[0]), learned_path)
             self.assertEqual(row["method"], "GROUP")
             self.assertEqual(row["cluster_count"], 1)
+            self.assertEqual(row["AR"], 10.0)
+            self.assertEqual(row["utility"], 90.0)
             reporter_class.assert_called_once()
 
 

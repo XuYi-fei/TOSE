@@ -342,6 +342,8 @@ class AlgorithmSpecificOutputTests(unittest.TestCase):
             avg_delay_loops=0.0,
             min_delay_loops=0,
             max_delay_loops=0,
+            abnormal_time=0.0,
+            abnormal_total_time=0.0,
             trace_metrics=[
                 TraceEvaluationMetrics(
                     filename="sample.txt",
@@ -354,6 +356,8 @@ class AlgorithmSpecificOutputTests(unittest.TestCase):
                     total_detection_count=1,
                     trigger_alarm_count=2,
                     trigger_allowed_count=1,
+                    abnormal_time=0.0,
+                    abnormal_total_time=0.0,
                 )
             ],
         )

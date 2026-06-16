@@ -53,6 +53,21 @@ RQ2 统一结果：
 - `@/rq_results/rq2/summary/rq2_holdout_system_summary.csv`
 - `@/rq_results/rq2/summary/rq2_holdout_system_summary.json`
 
+RQ3 当前目标：
+- 在 RQ1 的正式 holdout 协议基础上，对 `GROUP`、`SWD`、`ARD`、`PRD`、`GPD` 五种方法统计 `异常率` 与 `utility`。
+- `异常率` 沿用 ASE 风格 `AR` 定义。
+- `utility` 当前按 `100 - AR` 统一导出，便于与 RQ1 检测效果一起回看。
+
+RQ3 详细文档：
+- `@/docs/rq3_experiment_status.md`
+
+RQ3 统一重跑脚本：
+- `@/scripts/run_rq3_methods_matrix.py`
+
+RQ3 统一结果：
+- `@/rq_results/rq3/summary/rq3_system_summary.csv`
+- `@/rq_results/rq3/summary/rq3_system_summary.json`
+
 Git 提交规范：
 - 每次修改代码后都要运行聚焦验证，更新必要的进度文档，然后提交 git。
 - 每次提交必须使用完整的多行 commit message：首行使用 Conventional Commits 风格，正文写清楚本次提交改了什么、为什么改、验证了什么。

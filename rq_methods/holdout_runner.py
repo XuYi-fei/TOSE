@@ -12,6 +12,7 @@ from baseline_methods.evaluator import BaselineEvaluator, aggregate_results
 from baseline_methods.identifier import BaselineIdentifier
 
 from .group_adapter import GroupMethodRunner
+from .metrics import enrich_summary_row
 
 
 RQ1_METHODS = ["SWD", "ARD", "PRD", "GPD", "GROUP"]
@@ -32,6 +33,7 @@ SUMMARY_FIELDS = [
     "MTD",
     "MLD",
     "AR",
+    "utility",
     "precision",
     "recall",
     "f1_score",
@@ -55,7 +57,7 @@ def aggregate_holdout_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for (system, method), group in sorted(grouped.items()):
         holdout_count = len(group)
         summary_rows.append(
-            {
+            enrich_summary_row({
                 "system": system,
                 "method": method,
                 "holdout_count": holdout_count,
@@ -72,7 +74,7 @@ def aggregate_holdout_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "precision": sum(float(row["precision"]) for row in group) / holdout_count,
                 "recall": sum(float(row["recall"]) for row in group) / holdout_count,
                 "f1_score": sum(float(row["f1_score"]) for row in group) / holdout_count,
-            }
+            })
         )
     return summary_rows
 
@@ -137,7 +139,7 @@ class RQ1HoldoutRunner:
                     encoding="utf-8",
                 )
                 row = aggregate_results(system, method, trace_results)
-                rows.append({**row, "holdout_unit": holdout_name.removeprefix("holdout_")})
+                rows.append(enrich_summary_row({**row, "holdout_unit": holdout_name.removeprefix("holdout_")}))
 
         return rows
 
@@ -159,7 +161,7 @@ class RQ1HoldoutRunner:
                 test_data_path=paths["abnormal"],
                 output_dir=self.output_dir / system / holdout_name,
             )
-            rows.append({**row, "holdout_unit": holdout_name.removeprefix("holdout_")})
+            rows.append(enrich_summary_row({**row, "holdout_unit": holdout_name.removeprefix("holdout_")}))
         return rows
 
     def run(self) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:

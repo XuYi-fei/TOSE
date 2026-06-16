@@ -229,6 +229,8 @@ class BOCPDDetectionModeTests(unittest.TestCase):
                 first_detection_run_length=0,
                 first_detection_best_distribution="norm1",
                 first_detection_best_tail_p_value=0.0002,
+                abnormal_time=2.0,
+                abnormal_total_time=100.0,
                 anomaly_points=[point],
             )
             aggregated = AggregatedMetrics(
@@ -243,6 +245,8 @@ class BOCPDDetectionModeTests(unittest.TestCase):
                 avg_delay_loops=1.0,
                 min_delay_loops=1,
                 max_delay_loops=1,
+                abnormal_time=2.0,
+                abnormal_total_time=100.0,
                 trace_metrics=[trace_metric],
             )
 

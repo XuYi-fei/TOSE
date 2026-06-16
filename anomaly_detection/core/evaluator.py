@@ -14,6 +14,7 @@ from scipy.stats import binom
 from ..core.detector import AnomalyDetector, DetectionResult
 from common.adapters import ParserFactory
 from common.utils.trace_series import load_trace_series
+from baseline_methods import config as baseline_config
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,8 @@ class TraceEvaluationMetrics:
     first_detection_run_length: Optional[int] = None
     first_detection_best_distribution: Optional[str] = None
     first_detection_best_tail_p_value: Optional[float] = None
+    abnormal_time: float = 0.0
+    abnormal_total_time: float = 0.0
     anomaly_points: List[AnomalyPoint] = field(default_factory=list)  # 所有检测到的异常点
 
 
@@ -81,6 +84,8 @@ class AggregatedMetrics:
     avg_delay_loops: Optional[float]
     min_delay_loops: Optional[int]
     max_delay_loops: Optional[int]
+    abnormal_time: float = 0.0
+    abnormal_total_time: float = 0.0
 
     trace_metrics: List[TraceEvaluationMetrics] = field(default_factory=list)
 
@@ -274,15 +279,24 @@ class AnomalyEvaluator:
                 first_detection_best_tail_p_value = detection_result.best_tail_p_value
 
         # Step 4: Trace级别分类
+        trace_duration = float(metadata.duration)
+        abnormal_total_time = trace_duration if has_abn1 else 0.0
+        abnormal_time = 0.0
         if has_abn1:
             if first_detection_time is None:
                 # 全程未检测到异常
                 classification = 'FN'
                 delay_loops = None
+                abnormal_time = max(trace_duration - float(abn1_start_time), 0.0)
             else:
                 if first_detection_time >= abn1_start_time:
                     # 在abn1时间点或之后检测到
                     classification = 'TP'
+                    abnormal_time = (
+                        float(first_detection_time)
+                        - float(abn1_start_time)
+                        + baseline_config.TIME_UNIT_PER_LOOP[self.system_type]
+                    )
                 else:
                     # 在abn1时间点之前检测到（误报）
                     classification = 'FP'
@@ -316,6 +330,8 @@ class AnomalyEvaluator:
             first_detection_run_length=first_detection_run_length,
             first_detection_best_distribution=first_detection_best_distribution,
             first_detection_best_tail_p_value=first_detection_best_tail_p_value,
+            abnormal_time=abnormal_time,
+            abnormal_total_time=abnormal_total_time,
             anomaly_points=anomaly_points
         )
 
@@ -369,6 +385,9 @@ class AnomalyEvaluator:
             min_delay = None
             max_delay = None
 
+        abnormal_time = sum(m.abnormal_time for m in trace_metrics)
+        abnormal_total_time = sum(m.abnormal_total_time for m in trace_metrics)
+
         return AggregatedMetrics(
             total_traces=total_traces,
             tp_count=tp_count,
@@ -381,5 +400,7 @@ class AnomalyEvaluator:
             avg_delay_loops=avg_delay,
             min_delay_loops=min_delay,
             max_delay_loops=max_delay,
+            abnormal_time=abnormal_time,
+            abnormal_total_time=abnormal_total_time,
             trace_metrics=trace_metrics
         )
