@@ -20,6 +20,7 @@ from anomaly_detection.config.config import DetectionConfig
 from anomaly_detection.core.detector import AnomalyDetector, BOCPDDetector
 from anomaly_detection.core.evaluator import AnomalyEvaluator
 from anomaly_detection.visualization.reporter import DetectionReporter
+from rq_methods.detection_matrix_results import RESULT_FIELDNAMES, load_detection_result_row
 
 
 SYSTEM_CONFIG_MAP = {
@@ -150,32 +151,8 @@ def write_summary(rows: List[Dict[str, float | int | str]], output_dir: Path) ->
     csv_path = output_dir / "detection_matrix_summary.csv"
     json_path = output_dir / "detection_matrix_summary.json"
 
-    fieldnames = [
-        "system",
-        "algorithm",
-        "detection_mode",
-        "cluster_count",
-        "total_traces",
-        "tp_count",
-        "fp_count",
-        "fn_count",
-        "tn_count",
-        "tp_rate",
-        "fp_rate",
-        "fn_rate",
-        "precision",
-        "recall",
-        "f1_score",
-        "hazard_lambda",
-        "max_run_length",
-        "state_prior",
-        "changepoint_posterior_threshold",
-        "raw_anomaly_rule",
-        "tail_persistence_threshold",
-    ]
-
     with open(csv_path, "w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer = csv.DictWriter(handle, fieldnames=RESULT_FIELDNAMES)
         writer.writeheader()
         for row in rows:
             writer.writerow(row)
@@ -191,6 +168,24 @@ def write_summary(rows: List[Dict[str, float | int | str]], output_dir: Path) ->
         ),
         encoding="utf-8",
     )
+
+
+def rebuild_summary_from_existing_results(
+    systems: List[str],
+    algorithms: List[str],
+    output_dir: Path,
+) -> List[Dict[str, float | int | str]]:
+    rows: List[Dict[str, float | int | str]] = []
+    for system in systems:
+        for algorithm in algorithms:
+            row = load_detection_result_row(system, algorithm)
+            if row is None:
+                raise FileNotFoundError(
+                    f"缺少检测结果文件: detection_results/{system}/detection_results_{algorithm}.json"
+                )
+            rows.append(row)
+    write_summary(rows, output_dir)
+    return rows
 
 
 def main() -> None:
@@ -217,7 +212,20 @@ def main() -> None:
         choices=["pointwise", "bocpd"],
         help="覆盖配置中的检测模式",
     )
+    parser.add_argument(
+        "--rebuild-from-existing-results",
+        action="store_true",
+        help="从现有 detection_results/<system>/detection_results_<algorithm>.json 重建 summary，而不重跑检测。",
+    )
     args = parser.parse_args()
+
+    if args.rebuild_from_existing_results:
+        rebuild_summary_from_existing_results(
+            systems=args.systems,
+            algorithms=args.algorithms,
+            output_dir=Path(args.summary_dir),
+        )
+        return
 
     rows: List[Dict[str, float | int | str]] = []
     for system in args.systems:

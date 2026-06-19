@@ -159,6 +159,18 @@ GROUP 四聚类算法内部对比仍保留在单独矩阵中：
 - [detection_matrix_summary.csv](/Users/xuyifei/NJU/repos/TOSE/detection_results/summary/detection_matrix_summary.csv)
 - [detection_matrix_summary.json](/Users/xuyifei/NJU/repos/TOSE/detection_results/summary/detection_matrix_summary.json)
 - 重跑脚本：[run_rq1_detection_matrix.py](/Users/xuyifei/NJU/repos/TOSE/scripts/run_rq1_detection_matrix.py)
+- 结果读取公共模块：[detection_matrix_results.py](/Users/xuyifei/NJU/repos/TOSE/rq_methods/detection_matrix_results.py)
+
+其中：
+
+- 默认执行 `python3 scripts/run_rq1_detection_matrix.py` 会重新跑四系统 × 四算法的 GROUP 检测矩阵。
+- 如需基于现有标准结果文件快速重建 summary，可执行：
+
+```bash
+python3 scripts/run_rq1_detection_matrix.py --rebuild-from-existing-results
+```
+
+- 该模式会统一读取 `detection_results/<system>/detection_results_<algorithm>.json`，并重建 `detection_results/summary/` 下的 summary 文件。
 
 当前默认最佳 `learned_distributions.yaml` 对应的最佳算法为：
 

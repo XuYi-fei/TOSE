@@ -33,6 +33,8 @@ RQ1 关键结果文件：
 
 RQ1 统一重跑脚本：
 - `@/scripts/run_rq1_detection_matrix.py`
+  - 默认重跑 `GROUP × 4种聚类算法` 检测矩阵。
+  - 传入 `--rebuild-from-existing-results` 时，从 `detection_results/<system>/detection_results_<algorithm>.json` 重建 summary。
 
 RQ1 五方法统一对比脚本：
 - `@/scripts/run_rq1_methods_matrix.py`
@@ -80,6 +82,7 @@ RQ4 统一重跑脚本：
 - `@/scripts/run_rq4_group_algorithms_matrix.py`
   - 默认与 `RQ1` 四算法 GROUP 矩阵共用同一套 detection config 和同一条 `evaluate_system_algorithm(...)` 执行链路。
   - 只有显式传入 `--reuse-detection-results` 时，才复用已有 `detection_results/<system>/detection_results_<algorithm>.json`。
+  - `RQ1` 与 `RQ4` 的该类标准结果文件读取逻辑统一收敛在 `@/rq_methods/detection_matrix_results.py`。
 
 RQ4 统一结果：
 - `@/rq_results/rq4/summary/rq4_group_algorithms_summary.csv`

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from scripts.run_rq1_detection_matrix import ALGORITHMS, SYSTEM_CONFIG_MAP, evaluate_system_algorithm
+from .detection_matrix_results import load_detection_result_row
 
 from .rq4_ari import (
     SYSTEM_CLUSTERING_CONFIG_MAP,
@@ -66,7 +67,7 @@ class RQ4Runner:
         detection_config_path: str,
     ) -> dict[str, Any]:
         if self.reuse_detection_results:
-            reused = self._load_existing_detection_row(system, algorithm)
+            reused = load_detection_result_row(system, algorithm)
             if reused is not None:
                 return reused
         return evaluate_system_algorithm(
@@ -75,48 +76,6 @@ class RQ4Runner:
             detection_config_path,
             detection_mode_override=self.detection_mode_override,
         )
-
-    def _load_existing_detection_row(self, system: str, algorithm: str) -> dict[str, Any] | None:
-        detection_json_path = Path("detection_results") / system / f"detection_results_{algorithm}.json"
-        if not detection_json_path.exists():
-            return None
-
-        payload = json.loads(detection_json_path.read_text(encoding="utf-8"))
-        metadata = payload["metadata"]
-        summary = payload["summary"]
-        confusion = payload["confusion_matrix"]
-        performance = payload["performance_metrics"]
-        delay = payload["detection_delay"]
-        total = int(summary["total_traces"]) or 1
-        detection_mode = metadata.get("detection_mode", "pointwise")
-        bocpd = metadata.get("bocpd") or {}
-        return {
-            "system": system,
-            "algorithm": algorithm,
-            "detection_mode": detection_mode,
-            "cluster_count": int(metadata.get("cluster_count", summary.get("cluster_count", 0))),
-            "total_traces": total,
-            "tp_count": int(confusion["TP"]),
-            "fp_count": int(confusion["FP"]),
-            "fn_count": int(confusion["FN"]),
-            "tn_count": int(confusion["TN"]),
-            "tp_rate": int(confusion["TP"]) / total,
-            "fp_rate": int(confusion["FP"]) / total,
-            "fn_rate": int(confusion["FN"]) / total,
-            "precision": float(performance["precision"]),
-            "recall": float(performance["recall"]),
-            "f1_score": float(performance["f1_score"]),
-            "hazard_lambda": bocpd.get("hazard_lambda", "") if detection_mode == "bocpd" else "",
-            "max_run_length": bocpd.get("max_run_length", "") if detection_mode == "bocpd" else "",
-            "state_prior": bocpd.get("state_prior", "") if detection_mode == "bocpd" else "",
-            "changepoint_posterior_threshold": (
-                bocpd.get("changepoint_posterior_threshold", "") if detection_mode == "bocpd" else ""
-            ),
-            "raw_anomaly_rule": bocpd.get("raw_anomaly_rule", "") if detection_mode == "bocpd" else "",
-            "tail_persistence_threshold": (
-                bocpd.get("tail_persistence_threshold", "") if detection_mode == "bocpd" else ""
-            ),
-        }
 
     def _write_reports(self, rows: list[dict[str, Any]]) -> None:
         summary_dir = self.output_dir / "summary"
