@@ -48,6 +48,10 @@
 - `scripts/run_rq3_methods_matrix.py`
   - 在正式 `RQ1` holdout 协议基础上汇总 `GROUP`、`SWD`、`ARD`、`PRD`、`GPD` 的 `异常率` 与 `utility`
   - 输出到 `rq_results/rq3/`
+- `scripts/run_rq4_group_algorithms_matrix.py`
+  - 运行 `GROUP × 4种聚类算法` 的独立对比矩阵
+  - 在检测结果后追加 `ARI`
+  - 输出到 `rq_results/rq4/`
 
 ### WaDi 专用入口
 
@@ -207,6 +211,7 @@ TOSE/
 - RQ1 论文五方法统一对比写入 `rq_results/rq1/`，不要覆盖旧的 `baseline_results/` 或 `detection_results/`。
 - RQ2 论文三方法统一对比写入 `rq_results/rq2/`，不要覆盖 `rq_results/rq1/`。
 - RQ3 实用性汇总统一写入 `rq_results/rq3/`，不要覆盖 `rq_results/rq1/` 或 `rq_results/rq2/`。
+- RQ4 的 `GROUP × 聚类算法` 独立矩阵统一写入 `rq_results/rq4/`，不要覆盖 `detection_results/summary/`。
 - 五方法统一对比中的 `GROUP` 固定读取 `clustering_results/<system>/learned_distributions.yaml`，即聚类阶段选择的最佳算法产物；四聚类算法内部对比仍使用 `scripts/run_rq1_detection_matrix.py`。
 - 每次代码修改后应运行聚焦验证、更新进度文档并提交 git；提交信息必须是多行 message，正文写清楚改动、原因和验证。
 

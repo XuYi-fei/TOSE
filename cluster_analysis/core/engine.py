@@ -204,7 +204,7 @@ class ClusteringEngine:
                 params = self.algorithm_params.get(algo_name, {})
 
                 # 创建算法实例
-                algorithm = ClusteringFactory.create(algo_name, **params)
+                algorithm = self._create_algorithm_for_rq4(algo_name)
 
                 # 执行聚类
                 if self.partition_context_features:
@@ -249,6 +249,15 @@ class ClusteringEngine:
             logger.warning("未找到有效的聚类结果")
 
         return result
+
+    def _create_algorithm_for_rq4(self, algorithm_name: str):
+        """Create a clustering algorithm instance with configured params.
+
+        Kept as a small helper so RQ4 ARI evaluation can reuse the exact same
+        algorithm construction path as the standard clustering pipeline.
+        """
+        params = self.algorithm_params.get(algorithm_name, {})
+        return ClusteringFactory.create(algorithm_name, **params)
 
     def _attach_partition_context(self, parameters: List[DistributionParameters]) -> None:
         if not self.partition_context_features:

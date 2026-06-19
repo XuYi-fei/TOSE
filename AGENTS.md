@@ -68,6 +68,21 @@ RQ3 统一结果：
 - `@/rq_results/rq3/summary/rq3_system_summary.csv`
 - `@/rq_results/rq3/summary/rq3_system_summary.json`
 
+RQ4 当前目标：
+- 只使用 `GROUP` 方法，但对 `hdbscan`、`gmm`、`affinity_propagation`、`mean_shift` 四种聚类算法分别做辨识与检测。
+- 对每组 `GROUP + clustering algorithm` 的检测结果追加 `ARI`，用于评估聚类质量。
+- 结果需要输出为一份额外的、只包含 `GROUP × 4种聚类算法` 的独立矩阵。
+
+RQ4 详细文档：
+- `@/docs/rq4_experiment_status.md`
+
+RQ4 统一重跑脚本：
+- `@/scripts/run_rq4_group_algorithms_matrix.py`
+
+RQ4 统一结果：
+- `@/rq_results/rq4/summary/rq4_group_algorithms_summary.csv`
+- `@/rq_results/rq4/summary/rq4_group_algorithms_summary.json`
+
 Git 提交规范：
 - 每次修改代码后都要运行聚焦验证，更新必要的进度文档，然后提交 git。
 - 每次提交必须使用完整的多行 commit message：首行使用 Conventional Commits 风格，正文写清楚本次提交改了什么、为什么改、验证了什么。

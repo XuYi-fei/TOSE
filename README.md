@@ -192,6 +192,28 @@ python3 scripts/run_rq3_methods_matrix.py \
 - `rq_results/rq3/summary/rq3_system_summary.csv`
 - `rq_results/rq3/summary/rq3_system_summary.json`
 
+#### 6. RQ4 GROUP × 聚类算法对比
+
+RQ4 只使用 `GROUP` 方法，但分别测试四种聚类算法：
+
+- `hdbscan`
+- `gmm`
+- `affinity_propagation`
+- `mean_shift`
+
+并在每组检测结果后附加：
+
+- `ARI (Adjusted Rand Index)`
+
+```bash
+python3 scripts/run_rq4_group_algorithms_matrix.py \
+  --output-dir rq_results/rq4
+```
+
+**输出文件**:
+- `rq_results/rq4/summary/rq4_group_algorithms_summary.csv`
+- `rq_results/rq4/summary/rq4_group_algorithms_summary.json`
+
 ---
 
 ## ⚙️ 配置说明
