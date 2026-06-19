@@ -75,6 +75,89 @@ class RQ4RunnerTests(unittest.TestCase):
             self.assertIn("ari", csv_text)
             self.assertIn("0.9123", csv_text)
 
+    def test_rq4_runner_does_not_reuse_detection_results_by_default(self) -> None:
+        from rq_methods.rq4_runner import RQ4Runner
+
+        payload = {
+            "metadata": {
+                "cluster_count": 3,
+                "detection_mode": "pointwise",
+            },
+            "summary": {
+                "total_traces": 200,
+                "cluster_count": 3,
+            },
+            "confusion_matrix": {
+                "TP": 175,
+                "FP": 25,
+                "FN": 0,
+                "TN": 0,
+            },
+            "performance_metrics": {
+                "precision": 0.875,
+                "recall": 1.0,
+                "f1_score": 0.9333,
+            },
+            "detection_delay": {
+                "average_loops": 3.3,
+                "minimum_loops": 0,
+                "maximum_loops": 6,
+            },
+        }
+        fresh_detection_row = {
+            "system": "rubis",
+            "algorithm": "gmm",
+            "detection_mode": "pointwise",
+            "cluster_count": 9,
+            "total_traces": 200,
+            "tp_count": 180,
+            "fp_count": 20,
+            "fn_count": 0,
+            "tn_count": 0,
+            "tp_rate": 0.9,
+            "fp_rate": 0.1,
+            "fn_rate": 0.0,
+            "precision": 0.9,
+            "recall": 1.0,
+            "f1_score": 0.9474,
+            "hazard_lambda": "",
+            "max_run_length": "",
+            "state_prior": "",
+            "changepoint_posterior_threshold": "",
+            "raw_anomaly_rule": "",
+            "tail_persistence_threshold": "",
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            detection_dir = root / "detection_results" / "rubis"
+            detection_dir.mkdir(parents=True)
+            (detection_dir / "detection_results_gmm.json").write_text(json.dumps(payload), encoding="utf-8")
+
+            with patch(
+                "rq_methods.rq4_runner.build_clustering_result_for_ari",
+                return_value=object(),
+            ), patch(
+                "rq_methods.rq4_runner.compute_ari_from_result",
+                return_value=0.9,
+            ), patch(
+                "rq_methods.rq4_runner.evaluate_system_algorithm",
+                return_value=dict(fresh_detection_row),
+            ) as eval_mock:
+                current = Path.cwd()
+                try:
+                    os.chdir(root)
+                    rows = RQ4Runner(
+                        systems=["rubis"],
+                        algorithms=["gmm"],
+                        output_dir=root / "rq_results" / "rq4",
+                    ).run()
+                finally:
+                    os.chdir(current)
+
+            eval_mock.assert_called_once()
+            self.assertEqual(rows[0]["cluster_count"], 9)
+
     def test_rq4_runner_can_reuse_existing_detection_results(self) -> None:
         from rq_methods.rq4_runner import RQ4Runner
 
@@ -122,7 +205,12 @@ class RQ4RunnerTests(unittest.TestCase):
                 current = Path.cwd()
                 try:
                     os.chdir(root)
-                    rows = RQ4Runner(systems=["rubis"], algorithms=["gmm"], output_dir=root / "rq_results" / "rq4").run()
+                    rows = RQ4Runner(
+                        systems=["rubis"],
+                        algorithms=["gmm"],
+                        output_dir=root / "rq_results" / "rq4",
+                        reuse_detection_results=True,
+                    ).run()
                 finally:
                     os.chdir(current)
 

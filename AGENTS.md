@@ -78,6 +78,8 @@ RQ4 详细文档：
 
 RQ4 统一重跑脚本：
 - `@/scripts/run_rq4_group_algorithms_matrix.py`
+  - 默认与 `RQ1` 四算法 GROUP 矩阵共用同一套 detection config 和同一条 `evaluate_system_algorithm(...)` 执行链路。
+  - 只有显式传入 `--reuse-detection-results` 时，才复用已有 `detection_results/<system>/detection_results_<algorithm>.json`。
 
 RQ4 统一结果：
 - `@/rq_results/rq4/summary/rq4_group_algorithms_summary.csv`

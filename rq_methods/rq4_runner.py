@@ -26,7 +26,7 @@ class RQ4Runner:
         algorithms: list[str] | None = None,
         output_dir: str | Path = "rq_results/rq4",
         detection_mode_override: str | None = None,
-        reuse_detection_results: bool = True,
+        reuse_detection_results: bool = False,
     ):
         self.systems = list(systems or list(SYSTEM_CONFIG_MAP.keys()))
         self.algorithms = list(algorithms or ALGORITHMS)

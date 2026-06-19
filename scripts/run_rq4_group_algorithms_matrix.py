@@ -38,6 +38,11 @@ def main() -> int:
         choices=["pointwise", "bocpd"],
         help="Override configured GROUP detection mode.",
     )
+    parser.add_argument(
+        "--reuse-detection-results",
+        action="store_true",
+        help="Reuse existing detection_results/<system>/detection_results_<algorithm>.json instead of rerunning GROUP detection.",
+    )
     args = parser.parse_args()
 
     rows = RQ4Runner(
@@ -45,6 +50,7 @@ def main() -> int:
         algorithms=args.algorithms,
         output_dir=args.output_dir,
         detection_mode_override=args.detection_mode,
+        reuse_detection_results=args.reuse_detection_results,
     ).run()
     for row in rows:
         print(

@@ -17,7 +17,9 @@ RQ4 只使用 `GROUP` 方法，但在辨识阶段分别使用四种聚类算法�
 
 ## Official Protocol
 
-- 检测流程完全复用当前 `GROUP` 检测矩阵。
+- 检测流程默认完全复用当前 `GROUP` 检测矩阵的同一套配置与同一条执行链路。
+- `RQ4` 默认会重新调用 `scripts/run_rq1_detection_matrix.py` 中的 `evaluate_system_algorithm(...)`，保证共享的 `GROUP × 聚类算法` 检测统计与 `RQ1` 四算法矩阵来源一致。
+- 只有在显式传入 `--reuse-detection-results` 时，才会直接复用现有 `detection_results/<system>/detection_results_<algorithm>.json`。
 - 辨识阶段对每个 system 分别读取对应算法的 `learned_distributions_<algorithm>.yaml`。
 - `ARI` 基于 `data/<system>/identity` 的辨识数据重新计算：
   - `rubis/swat/wadi`: 真值标签为 `norm_label`
@@ -66,6 +68,12 @@ RQ4 只使用 `GROUP` 方法，但在辨识阶段分别使用四种聚类算法�
 - `swat` 上，`affinity_propagation` 的 `ARI` 很低，但在当前检测数据上反而达到了 `TP=200, FP=0, FN=0`。
 - `wadi` 上，`mean_shift` 的 `ARI=1.0` 且检测效果最好，是当前最一致的一组。
 - `cluster_count` 也很关键：`affinity_propagation` 在多个 system 上会产生极多簇，这说明它虽然能提升部分检测指标，但聚类语义本身并不稳定。
+
+## Consistency Constraint
+
+- `RQ4` 与 `RQ1` 正式 holdout 协议不是同一个实验，不要求数值一致。
+- 但 `RQ4` 与 `detection_results/summary/detection_matrix_summary.csv` 共享的 `GROUP × 4种聚类算法` 部分，应该来自同一批检测执行结果。
+- 因此当前规范是：默认重跑并对齐 `RQ1` 四算法 GROUP 矩阵；只有显式要求快速复用旧 JSON 时，才允许产生与该矩阵不一致的独立结果。
 
 ## Verification
 
