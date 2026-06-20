@@ -171,6 +171,11 @@ python3 scripts/run_rq1_detection_matrix.py --rebuild-from-existing-results
 ```
 
 - 该模式会统一读取 `detection_results/<system>/detection_results_<algorithm>.json`，并重建 `detection_results/summary/` 下的 summary 文件。
+- 如需进一步检查该 summary 与 `RQ4` 独立矩阵的共享字段是否完全一致，可执行：
+
+```bash
+python3 scripts/check_rq4_matches_rq1_matrix.py
+```
 
 当前默认最佳 `learned_distributions.yaml` 对应的最佳算法为：
 

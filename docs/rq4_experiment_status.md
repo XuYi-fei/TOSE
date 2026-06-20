@@ -29,8 +29,10 @@ RQ4 只使用 `GROUP` 方法，但在辨识阶段分别使用四种聚类算法�
 
 - ARI helper: [rq4_ari.py](/Users/xuyifei/NJU/repos/TOSE/rq_methods/rq4_ari.py)
 - Shared detection result loader: [detection_matrix_results.py](/Users/xuyifei/NJU/repos/TOSE/rq_methods/detection_matrix_results.py)
+- Consistency checker: [rq4_consistency.py](/Users/xuyifei/NJU/repos/TOSE/rq_methods/rq4_consistency.py)
 - Runner: [rq4_runner.py](/Users/xuyifei/NJU/repos/TOSE/rq_methods/rq4_runner.py)
 - CLI: [run_rq4_group_algorithms_matrix.py](/Users/xuyifei/NJU/repos/TOSE/scripts/run_rq4_group_algorithms_matrix.py)
+- Check script: [check_rq4_matches_rq1_matrix.py](/Users/xuyifei/NJU/repos/TOSE/scripts/check_rq4_matches_rq1_matrix.py)
 
 ## Outputs
 
@@ -76,10 +78,16 @@ RQ4 只使用 `GROUP` 方法，但在辨识阶段分别使用四种聚类算法�
 - 但 `RQ4` 与 `detection_results/summary/detection_matrix_summary.csv` 共享的 `GROUP × 4种聚类算法` 部分，应该来自同一批检测执行结果。
 - 因此当前规范是：默认重跑并对齐 `RQ1` 四算法 GROUP 矩阵；只有显式要求快速复用旧 JSON 时，才允许产生与该矩阵不一致的独立结果。
 - 当 `RQ4` 走 `--reuse-detection-results` 时，会与 `RQ1 --rebuild-from-existing-results` 共享同一套标准结果读取逻辑。
+- 当前也提供显式校验命令，用于检查两份 summary 的共享字段是否完全一致：
+
+```bash
+python3 scripts/check_rq4_matches_rq1_matrix.py
+```
 
 ## Verification
 
 ```bash
-python3 -m unittest tests.test_detection_matrix_results tests.test_rq4_runner tests.test_rq1_detection_matrix
-python3 -m compileall rq_methods/detection_matrix_results.py rq_methods/rq4_runner.py scripts/run_rq1_detection_matrix.py tests/test_detection_matrix_results.py tests/test_rq4_runner.py tests/test_rq1_detection_matrix.py
+python3 -m unittest tests.test_detection_matrix_results tests.test_rq4_runner tests.test_rq1_detection_matrix tests.test_rq4_consistency
+python3 scripts/check_rq4_matches_rq1_matrix.py
+python3 -m compileall rq_methods/detection_matrix_results.py rq_methods/rq4_consistency.py rq_methods/rq4_runner.py scripts/check_rq4_matches_rq1_matrix.py scripts/run_rq1_detection_matrix.py tests/test_detection_matrix_results.py tests/test_rq4_runner.py tests/test_rq1_detection_matrix.py tests/test_rq4_consistency.py
 ```
