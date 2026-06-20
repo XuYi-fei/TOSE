@@ -83,6 +83,7 @@ RQ4 统一重跑脚本：
   - 默认与 `RQ1` 四算法 GROUP 矩阵共用同一套 detection config 和同一条 `evaluate_system_algorithm(...)` 执行链路。
   - 只有显式传入 `--reuse-detection-results` 时，才复用已有 `detection_results/<system>/detection_results_<algorithm>.json`。
   - `RQ1` 与 `RQ4` 的该类标准结果文件读取逻辑统一收敛在 `@/rq_methods/detection_matrix_results.py`。
+  - 默认会在运行结束后自动执行 `RQ1/RQ4` 共享字段一致性校验；如需跳过，显式传入 `--skip-consistency-check`。
 - `RQ1`/`RQ4` 共享字段一致性校验脚本：
   - `@/scripts/check_rq4_matches_rq1_matrix.py`
 

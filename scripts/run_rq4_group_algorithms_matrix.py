@@ -12,11 +12,12 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from rq_methods.rq4_ari import ALGORITHMS
+from rq_methods.rq4_consistency import format_mismatches, validate_rq4_matches_rq1_summary
 from rq_methods.rq4_runner import RQ4Runner
 from scripts.run_rq1_detection_matrix import SYSTEM_CONFIG_MAP
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--systems",
@@ -43,7 +44,18 @@ def main() -> int:
         action="store_true",
         help="Reuse existing detection_results/<system>/detection_results_<algorithm>.json instead of rerunning GROUP detection.",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--skip-consistency-check",
+        action="store_true",
+        help="Skip checking that shared RQ4 fields match detection_results/summary/detection_matrix_summary.csv.",
+    )
+    parser.add_argument(
+        "--rq1-summary",
+        default="detection_results/summary/detection_matrix_summary.csv",
+        type=Path,
+        help="RQ1 GROUP four-algorithm matrix summary CSV used for consistency checking.",
+    )
+    args = parser.parse_args(argv)
 
     rows = RQ4Runner(
         systems=args.systems,
@@ -59,7 +71,15 @@ def main() -> int:
             f"TP={row['tp_count']} FP={row['fp_count']} FN={row['fn_count']} "
             f"Precision={row['precision']:.4f} Recall={row['recall']:.4f}"
         )
-    print(f"summary: {args.output_dir / 'summary' / 'rq4_group_algorithms_summary.csv'}")
+    rq4_summary_path = args.output_dir / "summary" / "rq4_group_algorithms_summary.csv"
+    print(f"summary: {rq4_summary_path}")
+    if not args.skip_consistency_check:
+        mismatches = validate_rq4_matches_rq1_summary(args.rq1_summary, rq4_summary_path)
+        if mismatches:
+            print("consistency check failed:")
+            print(format_mismatches(mismatches))
+            return 1
+        print("consistency check: RQ4 matches the shared RQ1 GROUP matrix fields.")
     return 0
 
 

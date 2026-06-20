@@ -20,6 +20,8 @@ RQ4 只使用 `GROUP` 方法，但在辨识阶段分别使用四种聚类算法�
 - 检测流程默认完全复用当前 `GROUP` 检测矩阵的同一套配置与同一条执行链路。
 - `RQ4` 默认会重新调用 `scripts/run_rq1_detection_matrix.py` 中的 `evaluate_system_algorithm(...)`，保证共享的 `GROUP × 聚类算法` 检测统计与 `RQ1` 四算法矩阵来源一致。
 - 只有在显式传入 `--reuse-detection-results` 时，才会直接复用现有 `detection_results/<system>/detection_results_<algorithm>.json`。
+- `RQ4` CLI 默认会在写出 `rq4_group_algorithms_summary.csv` 后立刻执行一致性检查；若共享字段与 `RQ1` 矩阵不一致，则命令以非零状态退出。
+- 如确实需要跳过该检查，可显式传入 `--skip-consistency-check`。
 - 辨识阶段对每个 system 分别读取对应算法的 `learned_distributions_<algorithm>.yaml`。
 - `ARI` 基于 `data/<system>/identity` 的辨识数据重新计算：
   - `rubis/swat/wadi`: 真值标签为 `norm_label`
@@ -87,7 +89,8 @@ python3 scripts/check_rq4_matches_rq1_matrix.py
 ## Verification
 
 ```bash
-python3 -m unittest tests.test_detection_matrix_results tests.test_rq4_runner tests.test_rq1_detection_matrix tests.test_rq4_consistency
+python3 -m unittest tests.test_detection_matrix_results tests.test_rq4_runner tests.test_rq1_detection_matrix tests.test_rq4_consistency tests.test_run_rq4_group_algorithms_matrix
 python3 scripts/check_rq4_matches_rq1_matrix.py
-python3 -m compileall rq_methods/detection_matrix_results.py rq_methods/rq4_consistency.py rq_methods/rq4_runner.py scripts/check_rq4_matches_rq1_matrix.py scripts/run_rq1_detection_matrix.py tests/test_detection_matrix_results.py tests/test_rq4_runner.py tests/test_rq1_detection_matrix.py tests/test_rq4_consistency.py
+python3 scripts/run_rq4_group_algorithms_matrix.py --systems rubis --algorithms gmm --reuse-detection-results
+python3 -m compileall rq_methods/detection_matrix_results.py rq_methods/rq4_consistency.py rq_methods/rq4_runner.py scripts/check_rq4_matches_rq1_matrix.py scripts/run_rq1_detection_matrix.py scripts/run_rq4_group_algorithms_matrix.py tests/test_detection_matrix_results.py tests/test_rq4_runner.py tests/test_rq1_detection_matrix.py tests/test_rq4_consistency.py tests/test_run_rq4_group_algorithms_matrix.py
 ```
